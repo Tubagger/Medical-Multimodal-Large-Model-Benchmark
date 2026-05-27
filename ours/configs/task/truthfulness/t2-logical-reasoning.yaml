@@ -1,0 +1,15 @@
+dataset_id: "logical-reasoning-text"
+model_id: "lingshu-32b"
+log_file: "./logs/truthfulness/t1-basic/logical-reasoning-text.json"
+
+generation_kwargs: {
+    'max_new_tokens': 300,
+    'do_sample': False,
+}
+
+evaluator_seq_cfgs: 
+  - rule_mcq_eval: 
+      metrics_cfg:
+        accuracy_score: {}
+  
+   

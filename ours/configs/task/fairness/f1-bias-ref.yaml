@@ -1,0 +1,9 @@
+dataset_id: "bias-ref"
+model_id: "lingshu-32b"
+log_file: "./logs/fairness/f1-bias-vqa/bias-ref.json"
+
+generation_kwargs: {
+    'max_new_tokens': 300,
+    'do_sample': False,
+    'repeat_times': 3
+}

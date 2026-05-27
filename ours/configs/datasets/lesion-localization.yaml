@@ -1,0 +1,3 @@
+annotation_file: './data/truthfulness/lesion_localization/labels.json'
+image_dir: './data/truthfulness/lesion_localization/images'
+nums: 200

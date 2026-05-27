@@ -1,0 +1,4 @@
+max_retries: 10
+timeout: 1
+base_url: https://www.dmxapi.cn/v1
+# base_url: https://qianfan.baidubce.com/v2

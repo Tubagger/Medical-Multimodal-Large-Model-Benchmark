@@ -1,0 +1,16 @@
+dataset_id: "privacy-recognition"
+model_id: "lingshu-32b"
+log_file: "./logs/privacy/p1-awareness/privacy-recognition.json"
+
+generation_kwargs: {
+    'max_new_tokens': 300,
+    'do_sample': False,
+}
+
+evaluator_seq_cfgs: 
+  - privacy-recognition-eval:
+      metrics_cfg: 
+        accuracy_score: {}
+        macro-f1: {}
+
+

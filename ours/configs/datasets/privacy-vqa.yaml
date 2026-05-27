@@ -1,0 +1,3 @@
+annotation_file: './data/privacy/privacy_vqa/questions.json'
+image_dir: './data/privacy/privacy_vqa/images/'
+nums: 1

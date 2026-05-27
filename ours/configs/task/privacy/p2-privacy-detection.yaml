@@ -1,0 +1,17 @@
+dataset_id: "privacy-detection"
+model_id: "lingshu-32b"
+log_file: "./logs/privacy/p2-leakgae/privacy-detection.json"
+
+generation_kwargs: {
+    'max_new_tokens': 300,
+    'do_sample': False,
+}
+
+evaluator_seq_cfgs: 
+  - phi_detection_eval: 
+      metrics_cfg: 
+        f1_score: {}
+        precision_score: {}
+        recall_score: {}
+
+

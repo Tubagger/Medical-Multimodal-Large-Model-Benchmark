@@ -1,0 +1,17 @@
+dataset_id: "privacy-inflow"
+model_id: "lingshu-32b"
+log_file: "./logs/privacy/p2-leakage/privacy-inflow.json"
+
+generation_kwargs:
+  max_new_tokens: 300
+  do_sample: false
+
+
+evaluator_seq_cfgs: 
+  - privacy-inflow-eval:  
+      metrics_cfg: 
+        multiclass_metrics: {}
+    
+    
+
+

@@ -1,0 +1,185 @@
+from typing import Optional, Sequence, Dict, Any
+from ours.datasets.base import BaseDataset
+from ours.utils.registry import registry
+from ours import ImageTxtSample, TxtSample
+import yaml
+import json,csv
+import os
+from itertools import islice
+
+@registry.register_dataset()
+class PerturbedDataset(BaseDataset):
+
+    dataset_ids: Sequence[str] = [
+        "perturbed-data"
+    ]
+    dataset_config: Optional[str] = "./ours/configs/datasets/perturbed-data.yaml"
+
+    def __init__(
+        self,
+        dataset_id: str,
+        model_id: str,
+        method_hook=None,
+        **kwargs
+    ):
+        super().__init__(dataset_id, model_id ,method_hook, **kwargs)
+
+        # =========================
+        # load yaml config
+        # =========================
+        with open(self.dataset_config) as f:
+            self.config = yaml.load(f, Loader=yaml.FullLoader)
+
+        self.image_dir = self.config.get('image_dir')
+        self.label_dir = self.config.get('annotation_file')
+        self.nums = self.config.get('nums')
+
+        assert os.path.exists(self.image_dir), f"❌ Image directory not found: {self.image_dir}"
+        assert os.path.exists(self.label_dir), f"❌ Label file not found: {self.label_dir}"
+
+        self.images = []
+
+        # =========================
+        # read TSV
+        # =========================
+        with open(self.label_dir, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f, delimiter='\t')
+            samples = list(reader)
+
+        assert self.nums <= len(samples), \
+            f"❌ num ({self.nums}) > total samples ({len(samples)})"
+
+        samples = samples[:self.nums]
+
+        dataset = []
+
+        # =========================
+        # scan images
+        # =========================
+        img_files = os.listdir(self.image_dir)
+
+        for img in img_files:
+            image_path = os.path.join(self.image_dir, img)
+            self.images.append(image_path)
+
+        # =========================
+        # read cached results
+        # =========================
+        result_path = f"logs/truthfulness/r3-perturbed/{model_id}/{dataset_id}.json"
+
+        processed_images = set()
+
+        if os.path.exists(result_path):
+
+            with open(result_path, "r", encoding="utf-8") as f:
+
+                results = json.load(f)
+
+                processed_samples = results.get("per_sample_results", [])
+
+                for item in processed_samples:
+
+                    try:
+                        image_path = item["content"]["image_path"]
+
+                        image_name = os.path.basename(image_path)
+
+                        processed_images.add(image_name)
+
+                    except Exception as e:
+                        print(f"⚠️ Cache parse error: {e}")
+
+            print(f"✅ Loaded {len(processed_images)} cached samples")
+
+        else:
+            print("⚠️ No cached results found")
+
+        # =========================
+        # prompt template
+        # =========================
+        PROMPT = """
+        You are a clinical diagnostic assistant.
+        Given the following multiple-choice question, select the single best answer.
+
+        Rules:
+        - Only output one option letter: A, B, C, D, or E.
+        - Do not provide any explanation.
+        - Do not output anything else.
+
+        ### Question:
+        {question}
+
+        ### Options:
+        A. {A}
+        B. {B}
+        C. {C}
+        D. {D}
+        E. {E}
+        """
+
+        # =========================
+        # build dataset
+        # =========================
+
+        for i, sample in enumerate(samples):
+
+            img_name = str(sample.get("index", "1")) + ".png"
+
+            # =========================
+            # skip cached sample
+            # =========================
+            if img_name in processed_images:
+                continue
+
+            image_path = os.path.join(self.image_dir, img_name)
+
+            # =========================
+            # image check
+            # =========================
+            if not os.path.exists(image_path):
+                print(f"❌ [MISSING IMAGE] {image_path}")
+                continue
+
+            # =========================
+            # build prompt
+            # =========================
+            try:
+
+                prompt = PROMPT.format(
+                    question=sample.get("question", ""),
+                    A=sample.get("A", ""),
+                    B=sample.get("B", ""),
+                    C=sample.get("C", ""),
+                    D=sample.get("D", ""),
+                    E=sample.get("E", ""),
+                )
+
+            except Exception as e:
+
+                print(f"❌ [PROMPT ERROR] {e}")
+
+                continue
+
+            # =========================
+            # append dataset
+            # =========================
+            dataset.append(
+                ImageTxtSample(
+                    image_path=image_path,
+                    text=prompt,
+                    target=sample.get('answer', None),
+                    extra=sample.get('index', None)
+                )
+            )
+
+        self.dataset = dataset
+
+
+    def __getitem__(self, idx: int) -> ImageTxtSample:
+        sample = self.dataset[idx]
+        if self.method_hook:
+            return self.method_hook.run(sample)
+        return sample
+
+    def __len__(self) -> int:
+        return len(self.dataset)

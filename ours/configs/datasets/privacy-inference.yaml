@@ -1,0 +1,3 @@
+annotation_file: './data/privacy/privacy_inference/privacy_inference_vqa.json'
+image_dir: './data/privacy/privacy_inference/images'
+nums: 200

@@ -1,0 +1,33 @@
+dataset_id: "lesion_localization"
+model_id: "lingshu-32b"
+log_file: "./logs/truthfulness/t1-basic/lesion_localization.json"
+
+generation_kwargs: {
+    'max_new_tokens': 300,
+    'do_sample': False,
+}
+
+evaluator_seq_cfgs: 
+  - rule_bbox_eval:
+      metrics_cfg:
+          iou_judge: {}
+
+  # - chatmodel_bbox_eval: 
+  #     model_id: 'deepseek-r1'
+
+  #     prompt_template: |
+  #       Here is a response of grounding task:{pred}, and the image size:{img_size}. 
+  #       Please standardize the predicted bbox coordinates. \nIf it contains [xmin,ymin,xmax,ymax] format, extract it directly; 
+  #       If it is in other formats, use image size to standardize it into [xmin, ymin, xmax, ymax] represented by floating numbers ranging from 0 to 1; 
+  #       If response doesn't have coordinates, return [0,0,0,0].\n Pay attention to directly return your answer in the form of [xmin, ymin, xmax, ymax] without process.",
+      
+  #     generation_kwargs: {
+  #       'max_new_tokens': 200,
+  #       'do_sample': False,
+  #     }
+
+  #     metrics_cfg:
+  #       iou_judge: {}
+
+  
+

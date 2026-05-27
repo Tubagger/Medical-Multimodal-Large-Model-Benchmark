@@ -1,0 +1,3 @@
+max_retries: 10
+timeout: 1
+base_url: /media/aiotlab/T7/lhx/Qwen3-32B

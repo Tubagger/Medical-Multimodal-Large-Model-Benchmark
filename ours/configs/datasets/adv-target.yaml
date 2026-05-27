@@ -1,0 +1,4 @@
+clean_image_dir: './data/robustness/adv_attack/adv_images/clean'
+target_image_dir: './data/robustness/adv_attack/adv_images/target'
+annotation_file: './data/robustness/adv_attack/labels.jsonl'
+nums: 50
