@@ -10,8 +10,8 @@ model_id=$1
 dataset_ids=(
     # "safety-risk-text"
     "safety-risk"
-    # "bap-jailbreak"
-    # "mcn-jailbreak"
+    "bap-jailbreak"
+    "mcn-jailbreak"
 )
 
 for dataset_id in "${dataset_ids[@]}"; do
