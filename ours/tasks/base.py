@@ -76,7 +76,6 @@ class BaseTask(ABC):
         return evaluators
 
 
-    
     def get_dataloader(self) -> DataLoader:
         dataloader = DataLoader(dataset=self.dataset, batch_size=1, collate_fn=collate_fn)
         return dataloader
@@ -92,11 +91,10 @@ class BaseTask(ABC):
         subset_evals = {}
         
         for evaluator in self.evaluators:
-            result,evals = evaluator(preds, labels, extras)
+            result,evals = evaluator(preds, labels, extras, self.log_file)
             for key in result.keys():
                 if key in results.keys():
                     warnings.warn(f"{key} already exists in results.")
-
             results.update(result)   
         #sub aspects
         subset_eval = extras[0] is not None and "subset" in extras[0]
@@ -161,7 +159,6 @@ class BaseTask(ABC):
 
             per_sample_results.extend(old_samples)
 
-            print(f"✅ Merged {len(old_samples)} old results")
 
         for idx in range(seq_len):
             per_sample_result = {}

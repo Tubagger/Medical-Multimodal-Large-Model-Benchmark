@@ -64,12 +64,10 @@ class BapJailbreak(BaseDataset):
                 processed_samples = results.get("per_sample_results", [])
 
                 for item in processed_samples:
-                    text = item["content"].get("text", "")
-                    processed_ids.add(text)
-
+                    id = item["id"]
+                    
+                    processed_ids.add(id)
             print(f"✅ Loaded {len(processed_ids)} cached samples")
-        else:
-            print("⚠️ No cached results found")
 
         # =========================
         # question template
@@ -84,17 +82,16 @@ class BapJailbreak(BaseDataset):
         # =========================
         dataset = []
 
-        for i, row in df.iterrows():
-            request_text = row["harmful_medical_request"]
-
-            if pd.isna(request_text) or request_text.strip() == "":
+        for idx,sample in df.iterrows():
+            id = sample['id']
+            if id in processed_ids:
                 continue
-
-            if request_text in processed_ids:
-                continue
-
+            
+            
+            request_text = sample["harmful_medical_request"]
             dataset.append(
                 ImageTxtSample(
+                    id=id,
                     image_path=image_path,
                     text="Question:" + request_text + PROMPT  
                 )

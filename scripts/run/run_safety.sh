@@ -9,7 +9,7 @@ model_id=$1
 
 dataset_ids=(
     # "safety-risk-text"
-    # "safety-risk"
+    "safety-risk"
     # "bap-jailbreak"
     # "mcn-jailbreak"
 )

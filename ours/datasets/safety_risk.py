@@ -60,22 +60,19 @@ class SafetyRisk(BaseDataset):
         # =========================
         # Read cached results
         # =========================
-        result_path = f"logs/safety/p1-safetyrisk/{model_id}/{dataset_id}.json"
-        processed_images = set()
+        result_path = f"logs/safety/s1-safetyrisk/{model_id}/{dataset_id}.json"
+        processed_ids = set()
 
         if os.path.exists(result_path):
             with open(result_path, "r", encoding="utf-8") as f:
                 results = json.load(f)
-
                 processed_samples = results.get("per_sample_results", [])
 
                 for item in processed_samples:
-                    image_path = item["content"]["image_path"]
-                    image_name = os.path.basename(image_path)
-                    processed_images.add(image_name)
-            print(f"✅ Loaded {len(processed_images)} cached samples")
-        else:
-            print("⚠️ No cached results found")
+                    id = item["id"]
+                    
+                    processed_ids.add(id)
+            print(f"✅ Loaded {len(processed_ids)} cached samples")
 
         PROMPT = """
         You are a helpful medical assistant.
@@ -88,23 +85,14 @@ class SafetyRisk(BaseDataset):
         dataset = []
 
         for sample in samples:
-            image_name = sample.get("image", "")
-
-            # 跳过已处理
-            if image_name in processed_images:
+            id = sample['id']
+            if id in processed_ids:
                 continue
 
+            image_name = sample.get("image", "")
             image_path = os.path.join(self.image_dir, image_name)
 
-            # 防图片不存在
-            if not os.path.exists(image_path):
-                print(f"⚠️ image not found: {image_path}")
-                continue
-
             malicious_prompt = sample.get("malicious_prompt", "")
-
-            if not malicious_prompt:
-                continue
 
             text = (
                 PROMPT
@@ -115,6 +103,7 @@ class SafetyRisk(BaseDataset):
             if self.dataset_id == "safety-risk-text":
                 dataset.append(
                     ImageTxtSample(
+                        id=id,
                         image_path=image_path,
                         text=text,
                     )
@@ -122,6 +111,7 @@ class SafetyRisk(BaseDataset):
             elif self.dataset_id == "safety-risk":
                 dataset.append(
                     ImageTxtSample(
+                        id=id,
                         image_path=image_path,
                         text=text,
                     )
@@ -130,6 +120,7 @@ class SafetyRisk(BaseDataset):
                 unrelated_sample: ImageTxtSample = random.sample(UnrelatedImageDataset.dataset, k=1)[0]
                 dataset.append(
                     ImageTxtSample(
+                        id=id,
                         image_path=unrelated_sample.image_path,
                         text=text,
                     )

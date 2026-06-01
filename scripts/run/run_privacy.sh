@@ -10,10 +10,10 @@ model_id=$1
 dataset_ids=(
     "privacy-recognition"
 
-    # "privacy-inflow"
-    # "privacy-detection"
+    "privacy-inflow"
+    "privacy-detection"
 
-    # "privacy-inference"
+    "privacy-inference"
     # "privacy-vqa"
 
 )

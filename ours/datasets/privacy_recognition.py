@@ -78,8 +78,6 @@ class PrivacyRecognitionDataset(BaseDataset):
         dataset = []
 
         for sample in samples:
-            
-
             id = sample['id']
             if id in processed_ids:
                 continue

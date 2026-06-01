@@ -1,4 +1,6 @@
 from abc import abstractmethod, ABC
+import json
+import os
 from typing import Dict, Any, Sequence, List, Tuple, Union, Optional
 from ours.evaluators.metrics import _supported_metrics
 from ours.utils.registry import registry
@@ -46,7 +48,7 @@ class BaseEvaluator(ABC):
         # no-op
         return preds, labels, extras
     
-    def eval(self, preds: Sequence[Any], labels: Optional[Sequence[Any]] = None, extras: Optional[Sequence[Any]] = None, **kwargs) -> Dict[str, Union[Sequence, float]]:
+    def eval(self, preds: Sequence[Any], labels: Optional[Sequence[Any]] = None, extras: Optional[Sequence[Any]] = None, log_file: str = None, **kwargs) -> Dict[str, Union[Sequence, float]]:
         """
         Evaluate pipeline including data processing and metrics calculation.
         
@@ -59,8 +61,29 @@ class BaseEvaluator(ABC):
             results
         """
 
+        # =========================
+        # load cache
+        # =========================
+        cached_preds = []
+        cached_labels = []
+        if log_file is not None and os.path.exists(log_file):
+
+            summary_key = f"{self.evaluator_id}:processed_summary"
+
+            with open(log_file, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+
+            summary = cache["total_results"][summary_key]
+
+            cached_preds = summary["processed_preds"]
+            cached_labels = summary["processed_labels"]
+
         
-        processed_preds, processed_labels, processed_extras, evals = self.process(preds, labels, extras)
+
+        new_preds, new_labels, processed_extras, evals = self.process(preds, labels, extras)
+        processed_preds = cached_preds + new_preds
+        processed_labels = cached_labels + new_labels
+
         results = {}
         if processed_preds is not None:
             print("processed_preds[0]:",processed_preds[:1])
@@ -73,9 +96,16 @@ class BaseEvaluator(ABC):
 
         for metrics_id, kwargs in self.metrics_cfg.items():
             metrics_fn = _supported_metrics[metrics_id]
-            results[metrics_id] = metrics_fn( processed_labels, processed_preds, **kwargs)
+            results[metrics_id] = metrics_fn(processed_labels, processed_preds, **kwargs)
+
+        #save  storage results
+        results["processed_summary"] = {
+            "processed_preds": processed_preds,
+            "processed_labels": processed_labels,
+        }
+
         print("chexpert-evals:",evals)
-        return results,evals
+        return results,evals,
     
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.eval(*args, **kwds)
@@ -115,7 +145,7 @@ class SequentialEvaluator:
             result.append(current)
         return result
 
-    def eval(self, preds: Sequence[Any], labels: Optional[Sequence[Any]] = None, extras: Optional[Sequence[Any]] = None, **kwargs) -> Dict[str, Union[Sequence, float]]:
+    def eval(self, preds: Sequence[Any], labels: Optional[Sequence[Any]] = None, extras: Optional[Sequence[Any]] = None, log_file: str = None, **kwargs) -> Dict[str, Union[Sequence, float]]:
         """
         Evaluate pipeline including data processing and metrics calculation.
         
@@ -135,11 +165,11 @@ class SequentialEvaluator:
                 preds, labels, extras = evaluator.process(preds, labels, extras)
             else:
                 # final evaluator
-                # results = evaluator(preds, labels, extras)
                 results, evals = evaluator(
                     preds,
                     labels,
-                    extras
+                    extras,
+                    log_file
                 )
 
                 prefix_results.update(

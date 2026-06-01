@@ -53,23 +53,18 @@ class PrivacyInflow(BaseDataset):
         # Read cached results
         # =========================
         result_path = f"logs/privacy/p2-leakage/{model_id}/{dataset_id}.json"
-        processed_images = set()
-
+        processed_ids = set()
 
         if os.path.exists(result_path):
             with open(result_path, "r", encoding="utf-8") as f:
                 results = json.load(f)
-
                 processed_samples = results.get("per_sample_results", [])
 
                 for item in processed_samples:
-                    image_path = item["content"]["image_path"]
-                    image_name = os.path.basename(image_path)
-                    processed_images.add(image_name)
-                
-                print(f"✅ Loaded {len(processed_images)} cached samples")
-        else:
-            print("⚠️ No cached results found")
+                    id = item["id"]
+                    
+                    processed_ids.add(id)
+            print(f"✅ Loaded {len(processed_ids)} cached samples")
 
         PROMPT = """
         You are a privacy-aware medical AI assistant.
@@ -88,17 +83,21 @@ class PrivacyInflow(BaseDataset):
         dataset = []
 
         for sample in samples:
+            
+            id = sample['id']
+            if id in processed_ids:
+                continue
+
             image_name = sample["image"]
             label = sample["label"]
             scenario = sample["scenario"]
-            if image_name in processed_images:
-                continue
 
             image_path = os.path.join(self.image_dir, image_name)
 
             if dataset_id == 'privacy-inflow-text':
                 dataset.append(
                     ImageTxtSample(
+                        id=id,
                         text=PROMPT  + scenario +"\nQuestion: " + sample["question"],
                         target=label
                     )
@@ -106,6 +105,7 @@ class PrivacyInflow(BaseDataset):
             elif dataset_id == 'privacy-inflow':
                 dataset.append(
                     ImageTxtSample(
+                        id=id,
                         image_path=image_path,
                         text=PROMPT  + scenario +"\nQuestion: " + sample["question"],
                         target=label
@@ -115,6 +115,7 @@ class PrivacyInflow(BaseDataset):
                 unrelated_sample: ImageTxtSample = random.sample(UnrelatedImageDataset.dataset, k=1)[0]
                 dataset.append(
                     ImageTxtSample(
+                        id=id,
                         image_path=unrelated_sample.image_path,
                         text=PROMPT  + scenario +"\nQuestion: " + sample["question"],
                         target=label

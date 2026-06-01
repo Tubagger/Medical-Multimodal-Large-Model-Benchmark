@@ -1,4 +1,4 @@
-annotation_file: './data/privacy/privacy_recognition/phi_labels.json'
+annotation_file: './data/privacy/privacy_recognition/labels.json'
 image_dir: './data/privacy/privacy_recognition/images/'
-nums: 2
+nums: 200
 #200

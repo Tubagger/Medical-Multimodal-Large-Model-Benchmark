@@ -248,14 +248,10 @@ class ChatModelDetection(BaseEvaluator):
         self.chatmodel = load_chatmodel(model_id=model_id, device=device)
         self.prompt_template = prompt_template
         self.generation_kwargs = generation_kwargs
-        formatter = string.Formatter()
-        self.prompt_template_fields = [fname for _, fname, _, _ in formatter.parse(self.prompt_template) if fname]
-    
 
-    def run_detector(self,user_prompt: str, rabbit_response: str) -> Tuple[float, str]:
+    def run_detector(self, rabbit_response: str) -> Tuple[float, str]:
         """
         输入:
-            user_prompt: 用户输入
             rabbit_response: 模型输出（需要检测的内容）
         返回:
             (violation_score, reason)
@@ -269,8 +265,6 @@ class ChatModelDetection(BaseEvaluator):
             {
                 "role": "user",
                 "content": (
-                    "USER_PROMPT:\n"
-                    f"{user_prompt}\n\n"
                     "RABBIT_RESPONSE:\n"
                     f"{rabbit_response}"
                 )
@@ -292,12 +286,17 @@ class ChatModelDetection(BaseEvaluator):
     def process(self, preds: Sequence[Any], labels: Optional[Sequence[Any]] = None, extras: Optional[Sequence[Any]] = None, **kwargs) -> Tuple[Sequence[Any], Sequence[Any]]:
         processed_preds = []
         processed_labels = []
+        evals = []
         for (pred, label, extra) in zip(preds, labels, extras):
-            score , reason = self.run_detector(extra,pred)
+            score , reason = self.run_detector(pred)
 
             processed_preds.append({"score": score, "reason": reason})
-
-        return processed_preds, processed_labels, extras
+            evals.append({
+                "response": pred,
+                "score": score,
+                "reason": reason
+            })
+        return processed_preds, processed_labels, extras , evals 
 
 @registry.register_evaluator()
 class ChatModelEvaluator(BaseEvaluator):
@@ -309,9 +308,7 @@ class ChatModelEvaluator(BaseEvaluator):
         self.chatmodel = load_chatmodel(model_id=model_id, device=device)
         self.prompt_template = prompt_template
         self.generation_kwargs = generation_kwargs
-        formatter = string.Formatter()
-        self.prompt_template_fields = [fname for _, fname, _, _ in formatter.parse(self.prompt_template) if fname]
-    
+
     def parse_content_json(self, raw_content: str) -> dict:
         if raw_content is None:
             raise ValueError("raw.content is None")
@@ -389,13 +386,10 @@ class AbstentionEvaluator(BaseEvaluator):
         self.chatmodel = load_chatmodel(model_id=model_id, device=device)
         self.prompt_template = prompt_template
         self.generation_kwargs = generation_kwargs
-        formatter = string.Formatter()
-        self.prompt_template_fields = [fname for _, fname, _, _ in formatter.parse(self.prompt_template) if fname]
 
     def run_detector(self, rabbit_response: str) -> Tuple[float, str]:
         """
         输入:
-            user_prompt: 用户输入
             rabbit_response: 模型输出（需要检测的内容）
         返回:
             (abstenion, reason)
@@ -419,12 +413,11 @@ class AbstentionEvaluator(BaseEvaluator):
         raw = self.chatmodel.chat(messages=detector_input, **self.generation_kwargs)
         try:
             data = json.loads(raw.content)
-            abstention = data.get("abstention", 0)
+            abstention = data.get("abstention", 1)
             reason = data.get("reason", "")
 
         except Exception as e:
-
-            abstention = 0
+            abstention = 1
             reason = f"ParseError: {e}"
 
         return abstention,reason
@@ -434,11 +427,12 @@ class AbstentionEvaluator(BaseEvaluator):
         processed_labels = []
         evals = []
         for (pred, label, extra) in zip(preds, labels, extras):
-            absteniton,reason = self.run_detector(preds)
+            absteniton,reason = self.run_detector(pred)
             processed_preds.append(absteniton)
+            
             evals.append({"abstention":absteniton,"reason": reason})
 
-        return processed_preds, processed_labels,extras,evals 
+        return processed_preds, processed_labels, extras,evals 
     
 
 
@@ -452,9 +446,7 @@ class ToxictyScoreEvaluator(BaseEvaluator):
         self.chatmodel = load_chatmodel(model_id=model_id, device=device)
         self.prompt_template = prompt_template
         self.generation_kwargs = generation_kwargs
-        formatter = string.Formatter()
-        self.prompt_template_fields = [fname for _, fname, _, _ in formatter.parse(self.prompt_template) if fname]
-    
+
     def parse_content_json(self, raw_content: str) -> dict:
         if raw_content is None:
             raise ValueError("raw.content is None")

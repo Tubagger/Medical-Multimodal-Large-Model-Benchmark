@@ -1,3 +1,4 @@
 annotation_file: './data/safety/mcn_jailbreak/labels.json'
 image_dir: './data/safety/mcn_jailbreak/images/'
 nums: 180
+#180

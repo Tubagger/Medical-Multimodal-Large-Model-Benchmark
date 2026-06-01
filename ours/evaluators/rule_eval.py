@@ -358,6 +358,7 @@ class PHIDetectionEvaluator(BaseEvaluator):
         
         all_pred_binary = []
         all_label_binary = []
+        evals = []
 
         for pred, label in zip(preds, labels):
 
@@ -377,8 +378,14 @@ class PHIDetectionEvaluator(BaseEvaluator):
                 if item not in label_set:
                     all_label_binary.append(0)  # 非真实 PHI
                     all_pred_binary.append(1)  # 模型误报
+            
+            evals.append({
+                "pred": str(pred_list),
+                "gt": str(label_list),
+                "match": pred_set == label_set
+            })
 
-        return all_pred_binary, all_label_binary, extras
+        return all_pred_binary, all_label_binary, extras, evals
 
 
 @registry.register_evaluator()
@@ -501,12 +508,18 @@ class PrivacyRecognitionEvaluator(BaseEvaluator):
 
         y_true = []
         y_pred = []
+        evals = []
 
         for pred, gt in zip(preds, labels):
             y_true.append(int(gt))  # 0 / 1 / 2
             y_pred.append(self._to_three_class(pred))
+            evals.append({
+                "pred": str(int(gt)),
+                "gt": str(self._to_three_class(pred)),
+                "match": bool(int(gt)==self._to_three_class(pred))
+            })
 
-        return y_pred, y_true, extras
+        return y_pred, y_true, extras, evals
     
 
 @registry.register_evaluator()
@@ -547,6 +560,7 @@ class PrivacyInflowEvaluator(BaseEvaluator):
 
         y_true = []
         y_pred = []
+        evals = []
 
         for pred, gt in zip(preds, labels):
 
@@ -566,5 +580,10 @@ class PrivacyInflowEvaluator(BaseEvaluator):
 
             y_true.append(gt_val)
             y_pred.append(self._to_three_class(pred))
+            evals.append({
+                "pred": str(gt_val),
+                "gt": str(self._to_three_class(pred)),
+                "match": bool(gt_val==self._to_three_class(pred))
+            })
 
-        return y_pred, y_true, extras
+        return y_pred, y_true, extras, evals

@@ -1,4 +1,4 @@
 query_file: './data/fairness/bias_vqa/bias_vqa.json'
 image_dir: './data/fairness/bias_vqa/images'
-nums: 2
+nums: 200
 #200
