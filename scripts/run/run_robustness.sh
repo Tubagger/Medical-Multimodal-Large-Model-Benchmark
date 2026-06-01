@@ -8,10 +8,10 @@ fi
 model_id=$1
 
 dataset_ids=(
-    # "ood"
-    # "perturbed-data"
-    "adv-target"
-    "adv-untarget"
+    "ood"
+    "perturbed-data"
+    # "adv-target"
+    # "adv-untarget"
 )
 
 for dataset_id in "${dataset_ids[@]}"; do

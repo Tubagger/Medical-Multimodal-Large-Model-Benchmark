@@ -45,7 +45,7 @@ class AnomalyData(BaseDataset):
         assert os.path.exists(self.label_dir), f"❌ Label file not found: {self.label_dir}"
 
         with open(self.label_dir, 'r', encoding='utf-8') as f:
-            samples = json.load(f)['samples']
+            samples = json.load(f)
 
         # =========================
         # Intercept sample
@@ -57,7 +57,7 @@ class AnomalyData(BaseDataset):
         # Read cached results
         # =========================
         result_path = f"logs/truthfulness/t1-basic/{model_id}/{dataset_id}.json"
-        processed_images = set()
+        processed_ids = set()
 
         if os.path.exists(result_path):
             with open(result_path, "r", encoding="utf-8") as f:
@@ -65,25 +65,10 @@ class AnomalyData(BaseDataset):
                 processed_samples = results.get("per_sample_results", [])
 
                 for item in processed_samples:
-                    image_path = item["content"]["image_path"]
-                    image_name = os.path.basename(image_path)
-                    processed_images.add(image_name)
-
-            print(f"✅ Loaded {len(processed_images)} cached samples")
-        else:
-            print("⚠️ No cached results found")
-
-
-        # =========================
-        # Define key name
-        # =========================
-
-        self.labels_columns = [
-            "No Finding", "Enlarged Cardiomediastinum", "Cardiomegaly", "Lung Opacity", "Lung Lesion",
-            "Edema", "Consolidation", "Pneumonia", "Atelectasis", "Pneumothorax",
-            "Pleural Effusion", "Pleural Other", "Fracture", "Support Devices"
-        ]
-
+                    id = item["id"]
+                    
+                    processed_ids.add(id)
+            print(f"✅ Loaded {len(processed_ids)} cached samples")
         # =========================
         # question template
         # =========================
@@ -121,25 +106,23 @@ class AnomalyData(BaseDataset):
         dataset = []
 
         for sample in samples:
-            img_name = sample['image_filename']
-
-            if img_name in processed_images:
+            id = sample['id']
+            if id in processed_ids:
                 continue
-
+            
+            img_name = sample['image']
             image_path = os.path.join(self.image_dir, img_name)
             label = sample['labels']
 
             dataset.append(
                 ImageTxtSample(
+                    id=id,
                     image_path=image_path,
                     text=PROMPT,
                     target=label
                 )
             )
-
-
         self.dataset = dataset
-
 
     def __getitem__(self, index: int) -> _OutputType:
         if self.method_hook:

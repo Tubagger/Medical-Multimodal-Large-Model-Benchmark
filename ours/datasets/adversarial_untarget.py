@@ -22,8 +22,6 @@ class AdvUnTarget(BaseDataset):
         with open(self.dataset_config, "r") as f:
             self.config = yaml.load(f, Loader=yaml.FullLoader)
 
-        self.generate_image = kwargs.get("generate_image", False)
-
         # ========= dirs =========
         self.image_dir = self.config.get("untarget_image_dir")
         self.annotation_file = self.config.get("annotation_file")
@@ -38,28 +36,45 @@ class AdvUnTarget(BaseDataset):
         if self.nums is not None:
             samples = samples[:self.nums]
 
+        # =========================
+        # Read cached results
+        # =========================
+        result_path = f"logs/robustness/r2-adv-attack/{model_id}/{dataset_id}.json"
+        processed_ids = set()
+
+        if os.path.exists(result_path):
+            with open(result_path, "r", encoding="utf-8") as f:
+                results = json.load(f)
+                processed_samples = results.get("per_sample_results", [])
+
+                for item in processed_samples:
+                    id = item["id"]
+                    
+                    processed_ids.add(id)
+            print(f"✅ Loaded {len(processed_ids)} cached samples")
+
+        PROMPT = """
+            Given the image, identify the anatomical structure (organ, tissue, or region) and briefly describe its appearance.
+        """
+
         dataset = []
 
-        for item in samples:
-
-            image_id = item["image_id"]
-            image_name = f"{image_id}.png"
-            image_path = os.path.join(self.image_dir, image_name)
-
-            if not os.path.exists(image_path):
-                print(f"[WARN] missing image: {image_path}")
+        for sample in samples:
+            id = sample['image_id']
+            if id in processed_ids:
                 continue
 
-            question = "Given the image, identify the anatomical structure (organ, tissue, or region) and briefly describe its appearance."
+            image_name = f"{id}.png"
+            image_path = os.path.join(self.image_dir, image_name)
 
-            # ✔ untarget label（核心）
-            untarget = item["untarget"][0] if isinstance(item["untarget"], list) else item["untarget"]
+            untarget = sample["untarget"][0] if isinstance(sample["untarget"], list) else sample["untarget"]
 
             dataset.append(
                 ImageTxtSample(
+                    id=id,
                     image_path=image_path,
-                    text=question,
-                    target=untarget   # ⭐关键：untarget evaluation
+                    text=PROMPT,
+                    target=untarget   
                 )
             )
 

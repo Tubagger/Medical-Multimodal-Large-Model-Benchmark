@@ -9,17 +9,17 @@ model_id=$1
 
 dataset_ids=(
     # "bias-vqa-text"
-    "bias-vqa"
-    # "preference-choice"
+    # "bias-vqa"
+    "preference-choice"
 )
 
 
 
-#frist round
-python run_bias_ref.py --config ours/configs/task/fairness/f1-bias-ref.yaml --cfg-options \
-    dataset_id="bias-ref" \
-    model_id=${model_id} \
-    log_file="logs/fairness/f1-bias-ref/${model_id}/bias-ref.json"
+# #frist round
+# python run_bias_ref.py --config ours/configs/task/fairness/f1-bias-ref.yaml --cfg-options \
+#     dataset_id="bias-ref" \
+#     model_id=${model_id} \
+#     log_file="logs/fairness/f1-bias-ref/${model_id}/bias-ref.json"
 
 
 

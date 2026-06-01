@@ -9,11 +9,11 @@ model_id=$1
 
 dataset_ids=(
     "privacy-recognition"
-    # "privacy-inflow-text"
-    "privacy-inflow"
-    "privacy-detection"
-    # "privacy-inference-text"
-    "privacy-inference"
+
+    # "privacy-inflow"
+    # "privacy-detection"
+
+    # "privacy-inference"
     # "privacy-vqa"
 
 )

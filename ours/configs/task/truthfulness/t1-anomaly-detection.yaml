@@ -3,7 +3,7 @@ model_id: "lingshu-32b"
 log_file: "./logs/truthfulness/t1-basic/anomaly-detection.json"
 
 generation_kwargs: {
-    'max_new_tokens': 300,
+    'max_new_tokens': 128,
     'do_sample': False,
 }
 

@@ -28,50 +28,65 @@ class CheXpertKeywordEvaluator(BaseEvaluator):
             "Fracture": ["Fracture"]
         }
 
+    def process(
+        self,
+        preds: Sequence[Any],
+        labels: Sequence[Any],
+        extras: Sequence[Any]
+        ):
 
-    def process(self, preds: Sequence[Any], labels: Sequence[Any], extras: Sequence[Any]) -> Tuple[Sequence[Any], Sequence[Any]]:
-        """
-        preds: 模型生成的文本描述
-        labels: 数据集标签（例如 [{'Cardiomegaly': 1, 'Edema': 0, ...}, ...])
-        extras: 额外信息（可忽略）
-        """
-        label_names = list(self.keyword_map.keys())  # 保持固定顺序
-        num_labels = len(label_names)
+        label_names = list(self.keyword_map.keys())
 
         y_pred = []
         y_true = []
+        evals = []
 
         for pred, label_dict in zip(preds, labels):
-            pred_vec = np.zeros(num_labels, dtype=int)
-            true_vec = np.zeros(num_labels, dtype=int)
 
-            # 1️⃣ 处理预测结果
+            # ---------- parse prediction ----------
+            pred_dict = {}
+
             if isinstance(pred, str):
-                pred_clean = re.sub(r"```json|```", "", pred).strip()
+
+                pred_clean = re.sub(
+                    r"```json|```",
+                    "",
+                    pred
+                ).strip()
+
+                match = re.search(r"\{.*\}", pred_clean, re.S)
+
+                if match:
+                    pred_clean = match.group()
+
                 try:
                     pred_dict = json.loads(pred_clean)
-                    for i, disease in enumerate(label_names):
-                        val = int(pred_dict.get(disease, 0))
-                        # 将 -1 转成 0
-                        pred_vec[i] = val if val >= 0 else 0
-                except Exception as e:
-                    print(f"⚠️ JSON parse error: {e} → default 0s")
-            else:
-                print(f"⚠️ Unexpected pred type: {type(pred)}")
 
-            # 2️⃣ 处理真实标签
-            for i, disease in enumerate(label_names):
-                val = int(label_dict.get(disease, 0))
-                # 将 -1 转成 0
-                true_vec[i] = val if val >= 0 else 0
+                except Exception as e:
+                    print(f"⚠️ JSON parse error: {e}")
+
+            # ---------- vectorize ----------
+            pred_vec = np.array([
+                max(int(pred_dict.get(disease, 0)), 0)
+                for disease in label_names
+            ])
+
+            true_vec = np.array([
+                max(int(label_dict.get(disease, 0)), 0)
+                for disease in label_names
+            ])
 
             y_pred.append(pred_vec)
             y_true.append(true_vec)
+            evals.append({
+                "pred": str(pred_vec.tolist()),
+                "gt": str(true_vec.tolist()),
+                "match": bool(np.array_equal(pred_vec, true_vec))
+            })
 
-        processed_preds = np.array(y_pred)
-        processed_labels = np.array(y_true)
+        return np.array(y_pred), np.array(y_true), extras, evals
 
-        return processed_preds, processed_labels, extras
+
 
 @registry.register_evaluator()
 class BBoxEvaluator(BaseEvaluator):
@@ -86,6 +101,33 @@ class BBoxEvaluator(BaseEvaluator):
 
         super().__init__(evaluator_id, metrics_cfg)
 
+    def compute_iou(self, box1, box2):
+        """
+        box: [xmin, ymin, xmax, ymax]
+        """
+
+        if box1 is None or box2 is None:
+            return 0.0
+
+        x1 = max(box1[0], box2[0])
+        y1 = max(box1[1], box2[1])
+        x2 = min(box1[2], box2[2])
+        y2 = min(box1[3], box2[3])
+
+        inter_w = max(0.0, x2 - x1)
+        inter_h = max(0.0, y2 - y1)
+
+        inter_area = inter_w * inter_h
+
+        area1 = max(0.0, box1[2] - box1[0]) * max(0.0, box1[3] - box1[1])
+        area2 = max(0.0, box2[2] - box2[0]) * max(0.0, box2[3] - box2[1])
+
+        union_area = area1 + area2 - inter_area
+
+        if union_area <= 0:
+            return 0.0
+
+        return inter_area / union_area
 
     def process(
         self,
@@ -95,7 +137,7 @@ class BBoxEvaluator(BaseEvaluator):
     ) -> Tuple[Sequence[Any], Sequence[Any], Sequence[Any]]:
 
         processed_preds = []
-        processed_labels = []
+        evals = []
 
         for pred, label, extra in zip(preds, labels, extras):
 
@@ -148,15 +190,18 @@ class BBoxEvaluator(BaseEvaluator):
                             ]
 
             except Exception as e:
-
                 print(f"⚠️ bbox parse error: {e}")
 
+            iou = self.compute_iou(pred_bbox, label)
             processed_preds.append(
-                pred_bbox
+                self.compute_iou(pred_bbox, label)
             )
+            evals.append({
+                'iou': str(iou),
+                'match':bool(iou>0.5)
+            })
 
-
-        return processed_preds, labels, extras
+        return processed_preds, labels, extras, evals
 
 @registry.register_evaluator()
 class GenericMCQEvaluator(BaseEvaluator):
@@ -251,6 +296,7 @@ class GenericMCQEvaluator(BaseEvaluator):
     def process(self, preds: Sequence[Any], labels: Sequence[Any], extras: Sequence[Any]):
         y_pred = []
         y_true = []
+        evals = []
 
         for pred, label, extra in zip(preds, labels, extras):
             valid_options = self._infer_valid_options(extra)
@@ -262,8 +308,14 @@ class GenericMCQEvaluator(BaseEvaluator):
             # 这里保持一致：y_true 固定 1，y_pred 为 1/0
             y_true.append(1)
             y_pred.append(1 if (true_opt is not None and pred_opt == true_opt) else 0)
+            evals.append({
+                'pred_opt': str(pred_opt),
+                'true_opt': str(true_opt),
+                'match': bool(pred_opt == true_opt)
+            
+            })
 
-        return np.array(y_pred), np.array(y_true), extras
+        return np.array(y_pred), np.array(y_true), extras, evals
     
 
     

@@ -60,22 +60,22 @@ class BaseEvaluator(ABC):
         """
 
         
-        processed_preds, processed_labels, processed_extras = self.process(preds, labels, extras)
+        processed_preds, processed_labels, processed_extras, evals = self.process(preds, labels, extras)
         results = {}
-        if len(processed_preds) > 0:
-            print("processed_preds[0]:", processed_preds[0])
+        if processed_preds is not None:
+            print("processed_preds[0]:",processed_preds[:1])
 
-        if len(processed_labels) > 0:
-            print("processed_labels[0]:", processed_labels[0])
+        if processed_labels is not None:
+            print("processed_labels[0]:",processed_labels[:1])
 
-        if len(processed_extras) > 0:
-            print("processed_extras[0]:", processed_extras[0])
+        if processed_extras is not None:
+            print("processed_extras[0]:",processed_extras[:1])
 
         for metrics_id, kwargs in self.metrics_cfg.items():
             metrics_fn = _supported_metrics[metrics_id]
-            results[metrics_id] = metrics_fn(processed_preds, processed_labels, **kwargs)
-
-        return results
+            results[metrics_id] = metrics_fn( processed_labels, processed_preds, **kwargs)
+        print("chexpert-evals:",evals)
+        return results,evals
     
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.eval(*args, **kwds)
@@ -135,10 +135,22 @@ class SequentialEvaluator:
                 preds, labels, extras = evaluator.process(preds, labels, extras)
             else:
                 # final evaluator
-                results = evaluator(preds, labels, extras)
-                prefix_results.update({f"{keyname_prefix}:{key}": value for key, value in results.items()})
-        
-        return prefix_results
+                # results = evaluator(preds, labels, extras)
+                results, evals = evaluator(
+                    preds,
+                    labels,
+                    extras
+                )
+
+                prefix_results.update(
+                    {
+                        f"{keyname_prefix}:{key}": value
+                        for key, value in results.items()
+                    }
+                )
+                # prefix_results.update({f"{keyname_prefix}:{key}": value for key, value in results.items()})
+        print("seq-evals:",evals)
+        return prefix_results, evals
     
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.eval(*args, **kwds)

@@ -28,10 +28,10 @@ class BaseTask(ABC):
         
     
     def get_handlers(self) -> None:
-        self.evaluators = self.get_evaluators()
-        self.method = self.get_method() # get method before dataset
         self.model = self.get_model()
+        self.method = self.get_method() # get method before dataset
         self.dataset = self.get_dataset()
+        self.evaluators = self.get_evaluators()
         self.orchestrator = self.get_orchestrator()
     
     def get_model(self) -> BaseChat:
@@ -82,24 +82,28 @@ class BaseTask(ABC):
         return dataloader
 
     def eval(self, responses: List[Dict[str, Any]]) -> Dict[str, Union[float, Sequence]]:
-
+        ids: Sequence[str] = [response.get('id', None) for response in responses]
         contents: Sequence[str] = [response.get('content', '') for response in responses]
         preds: Sequence[str] = [response.get('response', '') for response in responses]
         labels: Sequence[str] = [response.get('target', '') for response in responses]
         extras: Sequence[str] = [response.get('extra', None) for response in responses]
         results = {}
+        evals = {}
+        subset_evals = {}
         
         for evaluator in self.evaluators:
-            result = evaluator(preds, labels, extras=extras)
+            result,evals = evaluator(preds, labels, extras)
             for key in result.keys():
                 if key in results.keys():
                     warnings.warn(f"{key} already exists in results.")
+
             results.update(result)   
         #sub aspects
         subset_eval = extras[0] is not None and "subset" in extras[0]
         if subset_eval:
             # Evaluate with subset of dataset, `extra` field in dataclass must have `subset` key to enable subset evaluation.
             subset_list = [item['subset'] for item in extras]
+            
             assert any(subset_list)
 
             subsets = set(subset_list)
@@ -110,7 +114,7 @@ class BaseTask(ABC):
 
                 subset_results = {}
                 for evaluator in self.evaluators:
-                    subset_result = evaluator(preds_subset, labels_subset, extras_subset)
+                    subset_result, subset_evals = evaluator(preds_subset, labels_subset, extras_subset)
                     for key in subset_result.keys():
                         subset_key = f"{key}_{subset}"
                         if subset_key in results.keys():
@@ -122,10 +126,13 @@ class BaseTask(ABC):
 
         results.update(
             {
+                'id': ids if any(ids) else None,
                 'content': contents if any(contents) else None,
                 'response': preds if any(preds) else None,
                 'target': labels if any(labels) else None,
-                'extra': extras if any(extras) else None
+                'extra': extras if any(extras) else None,
+                'evals': evals if any(evals) else None,\
+                'subset_evals': subset_evals if any(subset_evals) else None
             }
         )
         return results
@@ -187,10 +194,9 @@ class BaseTask(ABC):
         for batch_data in dataloader:
 
             for data in batch_data:
-
+                id = data['id']
                 message = data['message']
                 target = data['target']
-
                 extra = data.get('extra') or {}
 
                 if system_prompt is not None:
@@ -210,25 +216,26 @@ class BaseTask(ABC):
                     resp_text = getattr(response, "content", str(response))
 
                 output = {
+                    "id": id,
                     "content": content,
                     "response": resp_text,
                     "target": target,
                     "extra": extra,
                 }
 
-                print("=========================result====================================")
-                print('content',output['content'])
-                print('response',output['response'])
-                print('target',output['target'])
-                print('extra',output['extra'])
-                print("===================================================================")
+                print("=========================================================result=========================================================")
+                print('id =',output['id'])
+                print('content =',output['content'])
+                print('response =',output['response'])
+                print('target =',output['target'])
+                print('extra =',output['extra'])
+                print("========================================================================================================================")
                 
                 responses.append(output)
 
                 pbar.update(1)
 
         pbar.close()
-
         return responses
 
     def pipeline(self) -> None:
@@ -240,7 +247,7 @@ class BaseTask(ABC):
         #     break
 
         if len(dataloader.dataset) == 0:
-            print("all data already done.")
+            print("all data eval already done.")
             return
 
         responses = self.generate(dataloader, **self.generation_kwargs)

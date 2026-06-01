@@ -23,10 +23,12 @@ def collate_fn(batch_data: List[_OutputType]):
                 "content": content
             }
         ]
+        id = data.id
         target = data.target
         extra = data.extra
         
         collate_data = {
+            'id': id,
             'message': message,
             'target': target,
             'extra': extra,

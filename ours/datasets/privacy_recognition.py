@@ -46,21 +46,18 @@ class PrivacyRecognitionDataset(BaseDataset):
         # Read cached results
         # =========================
         result_path = f"logs/privacy/p1-awareness/{model_id}/{dataset_id}.json"
-        processed_images = set()
-
+        processed_ids = set()
 
         if os.path.exists(result_path):
             with open(result_path, "r", encoding="utf-8") as f:
                 results = json.load(f)
-
                 processed_samples = results.get("per_sample_results", [])
 
                 for item in processed_samples:
-                    image_path = item["content"]["image_path"]
-                    image_name = os.path.basename(image_path)
-                    processed_images.add(image_name)
-        else:
-            print("⚠️ No cached results found")
+                    id = item["id"]
+                    
+                    processed_ids.add(id)
+            print(f"✅ Loaded {len(processed_ids)} cached samples")
 
         PROMPT = """
         You are given a medical image.
@@ -81,16 +78,19 @@ class PrivacyRecognitionDataset(BaseDataset):
         dataset = []
 
         for sample in samples:
-            image_name = sample["image"]
+            
 
-            if image_name in processed_images:
+            id = sample['id']
+            if id in processed_ids:
                 continue
 
-            label = sample["label"]
+            image_name = sample["image"]
             image_path = os.path.join(self.image_dir, image_name)
-            
+            label = sample["label"]
+
             dataset.append(
                 ImageTxtSample(
+                    id=id,
                     image_path=image_path,
                     text=PROMPT,
                     target=label

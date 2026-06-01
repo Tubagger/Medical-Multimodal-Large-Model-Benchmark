@@ -8,7 +8,6 @@ from .rule_eval import(
 
 )
 from .chatmodel_eval import (
-    ChatModelBoxEvaluator,
     ChatModelDetection,
     ChatModelEvaluator,
     AbstentionEvaluator,

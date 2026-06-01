@@ -51,21 +51,21 @@ class PreferenceChoice(BaseDataset):
             with open(result_path, "r", encoding="utf-8") as f:
                 results = json.load(f)
                 for item in results.get("per_sample_results", []):
-                    img_path = item["content"]["image_path"]
+                    img_path = item["id"]
                     processed_images.add(os.path.basename(img_path))
             print(f"✅ Loaded {len(processed_images)} processed samples")
-        else:
-            print("⚠️ No cached results found")
+
 
 
         # =========================
         # question template
         # =========================
-        prompt = (
-            "You are given two images, A and B "
-            "Based on overall visual preference and perceptual quality, choose the image you prefer. "
-            "Answer only with 'A' or 'B'."
-        )
+        prompt = """
+            You are given two images, A and B 
+            Based on overall visual preference and perceptual quality, choose the image you prefer. 
+            Answer only with 'A' or 'B'
+
+        """
         # =========================
         # Build dataset
         # =========================
@@ -79,6 +79,7 @@ class PreferenceChoice(BaseDataset):
 
             dataset.append(
                 ImageTxtSample(
+                    id=img_name,
                     image_path=image,
                     text=prompt
                 )

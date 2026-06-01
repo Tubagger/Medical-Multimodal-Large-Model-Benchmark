@@ -1,7 +1,5 @@
 #!/bin/bash
 
-
-
 echo "===================================="
 echo "Step 1: Run safety evaluation local"
 echo "===================================="
@@ -19,9 +17,9 @@ do
     echo "Running model: $model_id"
     echo "=================================="
 
-    # bash scripts/run/run_truthfulness.sh $model_id
+    bash scripts/run/run_truthfulness.sh $model_id
 
-    bash scripts/run/run_robustness.sh $model_id
+    # bash scripts/run/run_robustness.sh $model_id
 
     # bash scripts/run/run_fairness.sh $model_id
 

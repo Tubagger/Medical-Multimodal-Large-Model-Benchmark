@@ -1,2 +1,3 @@
 query_file: './data/fairness/bias_vqa/bias_vqa.json'
-nums: 200
+nums: 2
+#200

@@ -45,120 +45,20 @@ def failure(y_true, y_pred, fails_num: Optional[Union[float, int]] = np.nan):
         failure = (x == fails_num).sum() / x.size
     return failure
 
-def parse_box_string(box_str):
-    # Remove triple quotes and any additional newline characters
-    box_str = box_str.replace("'''", "").replace("\n", "").strip("[]")
-    parts = box_str.split(",")
-    parsed_parts = []
-    for part in parts:
-        # Clean up any stray spaces
-        clean_part = part.strip()
-        if '/' in clean_part:
-            numerator, denominator = clean_part.split('/')
-            parsed_parts.append(float(numerator) / float(denominator))
-        else:
-            parsed_parts.append(float(clean_part))
-    return parsed_parts
+def acc_at_iou(y_true, y_pred, threshold=0.5):
+    if len(y_pred) == 0:
+        return 0.0
 
-# def iou_judge(box1_list, box2_list):
-#     print('box1_list: {}'.format(box1_list))
-#     print('box2_list: {}'.format(box2_list))
-#     cnt = 0
-#     box_len = len(box1_list)
-#     for i in range(box_len):
-#         box_1 = json.loads(box1_list[i])
-#         box_2 = parse_box_string(box2_list[i])
-#         x1_min, y1_min, x1_max, y1_max = box_1
-#         x2_min, y2_min, x2_max, y2_max = box_2
+    success = sum(iou >= threshold for iou in y_pred)
 
-#         x_inter_min = max(x1_min, x2_min)
-#         y_inter_min = max(y1_min, y2_min)
-#         x_inter_max = min(x1_max, x2_max)
-#         y_inter_max = min(y1_max, y2_max)
-        
-#         inter_width = max(0, x_inter_max - x_inter_min)
-#         inter_height = max(0, y_inter_max - y_inter_min)
-#         inter_area = inter_width * inter_height 
-#         box1_area = (x1_max - x1_min) * (y1_max - y1_min)
-#         box2_area = (x2_max - x2_min) * (y2_max - y2_min)
-#         union_area = box1_area + box2_area - inter_area
+    return success / len(y_pred)
 
-#         if inter_area == 0 or union_area == 0:
-#             iou = 0
-#         else:
-#             iou = inter_area / union_area
-#         print("iou",iou)
-#         if iou > 0.5:
-#             print("success grounding!")
-#             cnt += 1
-    
-#     grounding_rate = (cnt * 1.0 / box_len) * 100.0       
-#     return grounding_rate
+def mean_iou(y_true, y_pred):
+    """
+    y_pred: IoU列表
+    """
+    return float(np.mean(y_pred)) if len(y_pred) > 0 else 0.0
 
-def parse_box(box):
-    """兼容性解析函数，支持 str / list / 嵌套 list"""
-    # 如果是字符串类型，例如 "[0.1,0.2,0.3,0.4]"
-    if isinstance(box, str):
-        try:
-            return json.loads(box)
-        except json.JSONDecodeError:
-            # 如果有多余引号 '''[0.1,0.2,0.3,0.4]'''
-            box = box.strip("'''").strip('"')
-            return json.loads(box)
-    
-    # 如果是单个 list [x1,y1,x2,y2]
-    elif isinstance(box, list) and all(isinstance(x, (int, float)) for x in box):
-        return box
-
-    # 如果是嵌套 list [[x1,y1,x2,y2]]
-    elif isinstance(box, list) and len(box) == 1 and isinstance(box[0], list):
-        return box[0]
-    
-    # 其他情况返回空框
-    return [0, 0, 0, 0]
-
-
-def iou_judge(box1_list, box2_list):
-
-    cnt = 0
-    box_len = min(len(box1_list), len(box2_list))  # 防止长度不一致
-    total_iou = 0.0
-
-    for i in range(box_len):
-        box_1 = parse_box(box1_list[i])
-        box_2 = parse_box(box2_list[i])
-
-        if not (len(box_1) == len(box_2) == 4):
-            print(f"⚠️ Invalid box at index {i}: {box_1}, {box_2}")
-            continue
-
-        x1_min, y1_min, x1_max, y1_max = box_1
-        x2_min, y2_min, x2_max, y2_max = box_2
-
-        # 计算交并比 (IoU)
-        x_inter_min = max(x1_min, x2_min)
-        y_inter_min = max(y1_min, y2_min)
-        x_inter_max = min(x1_max, x2_max)
-        y_inter_max = min(y1_max, y2_max)
-        
-        inter_w = max(0, x_inter_max - x_inter_min)
-        inter_h = max(0, y_inter_max - y_inter_min)
-        inter_area = inter_w * inter_h
-        box1_area = (x1_max - x1_min) * (y1_max - y1_min)
-        box2_area = (x2_max - x2_min) * (y2_max - y2_min)
-        union_area = box1_area + box2_area - inter_area
-
-        iou = inter_area / union_area if union_area > 0 else 0
-        total_iou += iou
-
-        if iou > 0.5:
-            cnt += 1
-
-    grounding_rate = (cnt / box_len) if box_len > 0 else 0
-    mean_iou = total_iou / box_len if box_len > 0 else 0
-    # print(f"\n📊 Mean IoU: {mean_iou:.4f}, Grounding rate: {grounding_rate:.2f}%")
-
-    return grounding_rate
 
 def roc_auc(y_true, y_pred):
     """
@@ -228,49 +128,6 @@ def multiclass_metrics(y_true, y_pred, y_prob=None):
 
     return results
 
-# def majority_answer_rate(preds: Sequence[Sequence[Any]]) -> List[Dict[str, float]]:
-#     """
-#     preds: List[List[str]]
-#         每个子 list 是同一个数据的多次回答
-
-#     返回：
-#         [
-#           {"majority_answer": "C", "majority_ratio": 1.0},
-#           {"majority_answer": "B", "majority_ratio": 1.0},
-#           ...
-#         ]
-#     """
-#     valid_options = ["A", "B", "C", "D"]
-#     results: List[Dict[str, float]] = []
-
-#     for item_preds in preds:
-#         counter = {opt: 0 for opt in valid_options}
-
-#         for pred in item_preds:
-#             if not isinstance(pred, str):
-#                 continue
-#             m = re.search(r"\b([ABCD])\b", pred.upper())
-#             if m:
-#                 counter[m.group(1)] += 1
-
-#         total = sum(counter.values())
-
-#         if total == 0:
-#             results.append({
-#                 "majority_answer": None,
-#                 "majority_ratio": 0.0
-#             })
-#             continue
-
-#         majority_answer = max(counter, key=counter.get)
-#         majority_ratio = counter[majority_answer] / total
-
-#         results.append({
-#             "majority_answer": majority_answer,
-#             "majority_ratio": majority_ratio
-#         })
-
-#     return results
 
 def privacy_rate(preds, labels):
     """
@@ -404,9 +261,15 @@ _supported_metrics = {
     "macro-f1": macro_f1,
     "pearson_corr": pearson_corr,
     "failure": failure,
-    "iou_judge": iou_judge,
-    "roc-auc": roc_auc,
+
     "multiclass_metrics": multiclass_metrics,
+    "acc_at_iou": acc_at_iou,
+    "mean_iou": mean_iou,
+    "asr": accuracy_score,
+
+    "roc-auc": roc_auc,
+
+    
 
 
     "privacy_rate": privacy_rate,

@@ -38,28 +38,45 @@ class AdvTarget(BaseDataset):
         if self.nums is not None:
             samples = samples[:self.nums]
 
+        # =========================
+        # Read cached results
+        # =========================
+        result_path = f"logs/robustness/r2-adv-attack/{model_id}/{dataset_id}.json"
+        processed_ids = set()
+
+        if os.path.exists(result_path):
+            with open(result_path, "r", encoding="utf-8") as f:
+                results = json.load(f)
+                processed_samples = results.get("per_sample_results", [])
+
+                for item in processed_samples:
+                    id = item["id"]
+                    
+                    processed_ids.add(id)
+            print(f"✅ Loaded {len(processed_ids)} cached samples")
+
+        PROMPT = """
+            Given the image, identify the anatomical structure (organ, tissue, or region) and briefly describe its appearance.
+        """
+
         dataset = []
 
-        for item in samples:
-
-            image_id = item["image_id"]
-            image_name = f"{image_id}.png"
-            image_path = os.path.join(self.image_dir, image_name)
-
-            if not os.path.exists(image_path):
-                print(f"[WARN] missing image: {image_path}")
+        for sample in samples:
+            id = sample['image_id']
+            if id in processed_ids:
                 continue
 
-            question = "Given the image, identify the anatomical structure (organ, tissue, or region) and briefly describe its appearance."
+            image_name = f"{id}.png"
+            image_path = os.path.join(self.image_dir, image_name)
 
-            # target label（核心）
-            target = item["target"][0] if isinstance(item["target"], list) else item["target"]
+            target = sample["target"][0] if isinstance(sample["target"], list) else sample["target"]
 
             dataset.append(
                 ImageTxtSample(
+                    id=id,
                     image_path=image_path,
-                    text=question,
-                    target=target   # ⭐关键：untarget evaluation
+                    text=PROMPT,
+                    target=target   
                 )
             )
 

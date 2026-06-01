@@ -20,6 +20,7 @@ if apikeys:
 @dataclass
 class TxtSample:
     text: str
+    id: Optional[str] = None
     target: Optional[str] = None
     extra: Optional[Dict[str, Any]] = None
     
@@ -38,6 +39,7 @@ class TxtSample:
 class ImageTxtSample:
     image_path: str
     text: str
+    id: Optional[str] = None
     target: Optional[str] = None
     extra: Optional[Dict[str, Any]] = None
 

@@ -37,8 +37,6 @@ class OODDataset(BaseDataset):
         assert os.path.exists(self.image_dir), f"❌ Image directory not found: {self.image_dir}"
         assert os.path.exists(self.label_dir), f"❌ Label file not found: {self.label_dir}"
 
-        self.images = []
-
         # =========================
         # read TSV
         # =========================
@@ -47,47 +45,26 @@ class OODDataset(BaseDataset):
             samples = list(reader)
 
         assert self.nums <= len(samples), f"❌ num ({self.nums}) > total samples ({len(samples)})"
-
         samples = samples[:self.nums]
 
         dataset = []
 
         # =========================
-        # scan images
-        # =========================
-        img_files = os.listdir(self.image_dir)
-
-        for img in img_files:
-            image_path = os.path.join(self.image_dir, img)
-            self.images.append(image_path)
-
-        # =========================
         # read cached results
         # =========================
         result_path = f"logs/robustness/r1-ood/{model_id}/{dataset_id}.json"
-
-        processed_images = set()
+        processed_ids = set()
 
         if os.path.exists(result_path):
-
             with open(result_path, "r", encoding="utf-8") as f:
-
                 results = json.load(f)
-
                 processed_samples = results.get("per_sample_results", [])
 
                 for item in processed_samples:
-
-                    image_path = item["content"]["image_path"]
-
-                    image_name = os.path.basename(image_path)
-
-                    processed_images.add(image_name)
-
-            print(f"✅ Loaded {len(processed_images)} cached samples")
-
-        else:
-            print("⚠️ No cached results found")
+                    id = item["id"]
+                    
+                    processed_ids.add(id)
+            print(f"✅ Loaded {len(processed_ids)} cached samples")
 
         # =========================
         # prompt template
@@ -95,15 +72,12 @@ class OODDataset(BaseDataset):
         PROMPT = """
         You are a clinical diagnostic assistant.
         Given the following multiple-choice question, select the single best answer.
-
         Rules:
         - Only output one option letter: A, B, C, D, or E.
         - Do not provide any explanation.
         - Do not output anything else.
-
         ### Question:
         {question}
-
         ### Options:
         A. {A}
         B. {B}
@@ -116,24 +90,17 @@ class OODDataset(BaseDataset):
         # build dataset
         # =========================
 
-        for i, sample in enumerate(samples):
-
-            img_name = str(sample.get("index", "1")) + ".png"
+        for sample in samples:
 
             # =========================
             # skip cached sample
             # =========================
-            if img_name in processed_images:
+            id = sample.get('index')
+            if id in processed_ids:
                 continue
-
+            
+            img_name = str(sample.get("index", "0")) + ".png"
             image_path = os.path.join(self.image_dir, img_name)
-
-            # =========================
-            # image check
-            # =========================
-            if not os.path.exists(image_path):
-                print(f"❌ [MISSING IMAGE] {image_path}")
-                continue
 
             # =========================
             # build prompt
@@ -161,9 +128,9 @@ class OODDataset(BaseDataset):
             dataset.append(
                 ImageTxtSample(
                     image_path=image_path,
+                    id=id,
                     text=prompt,
                     target=sample.get('answer', None),
-                    extra=sample.get('index', None)
                 )
             )
 

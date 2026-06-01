@@ -27,58 +27,31 @@ class BiasRefData(BaseDataset):
         self.nums = config.get("nums", None)
         dataset_path = config.get("query_file", None)
 
-        if dataset_path is None:
-            raise ValueError("bias-ref.yaml must contain field: data_path")
-
-        if not os.path.exists(dataset_path):
-            raise FileNotFoundError(f"Dataset file not found: {dataset_path}")
-
-        samples = self.load_dataset(dataset_path)
+        with open(self.label_dir, 'r', encoding='utf-8') as f:
+            samples = json.load(f)
 
         # =========================
         # Intercept sample
         # =========================
         assert self.nums <= len(samples), f"❌ num ({self.nums}) > total samples ({len(samples)})"
-        sample = samples[:self.nums]
+        samples = samples[:self.nums]
 
         # =========================
         # Read cached results
         # =========================
         result_path = f"logs/fairness/f1-bias-ref/{model_id}/{dataset_id}.json"
-
-        processed_qids = set()
+        processed_ids = set()
 
         if os.path.exists(result_path):
-
             with open(result_path, "r", encoding="utf-8") as f:
-
                 results = json.load(f)
+                processed_samples = results.get("per_sample_results", [])
 
-                for item in results.get("per_sample_results", []):
-
-                    extra = item.get("extra", {})
-
-                    # extra 可能是 dict
-                    if isinstance(extra, dict):
-
-                        qid = extra.get("qid")
-
-                        if qid is not None:
-                            processed_qids.add(qid)
-
-                    # extra 可能是 list
-                    elif isinstance(extra, list):
-
-                        for e in extra:
-
-                            if isinstance(e, dict):
-
-                                qid = e.get("qid")
-
-                                if qid is not None:
-                                    processed_qids.add(qid)
-
-        print(f"✅ Loaded {len(processed_qids)} processed qids")
+                for item in processed_samples:
+                    id = item["id"]
+                    
+                    processed_ids.add(id)
+            print(f"✅ Loaded {len(processed_ids)} cached samples")
 
 
         # =========================
@@ -89,52 +62,19 @@ class BiasRefData(BaseDataset):
 
         for sample in samples:
 
-            qid = sample.extra.get("qid")
-
-            if qid in processed_qids:
+            id = sample['id']
+            if id in processed_ids:
                 continue
-
-            dataset.append(sample)
+            
+            sample_text = self.build_input_text(item)
+            dataset.append(
+                TxtSample(
+                    id=id,
+                    text=sample_text,
+                )
+            )
 
         self.dataset = dataset
-
-    # ------------------------ #
-    #   load（json/jsonl）
-    # ------------------------ #
-    def load_dataset(self, path: str) -> List[Any]:
-        samples = []
-
-        if path.endswith(".json"):
-            data = json.load(open(path, "r", encoding="utf-8"))
-        elif path.endswith(".jsonl"):
-            data = [json.loads(line) for line in open(path, "r", encoding="utf-8")]
-        else:
-            raise ValueError(f"Unknown dataset format: {path}")
-
-        if self.nums > len(data):
-            warnings.warn(
-                f"[BiasRefData] nums ({self.nums}) > dataset size ({len(data)}). "
-                f"Automatically adjusted to {len(data)}."
-            )
-            self.nums = len(data)
-
-        data = data[:self.nums]
-        # -------------------------
-
-        for idx, item in enumerate(data):
-            try:
-                sample_text = self.build_input_text(item)
-                samples.append(
-                    TxtSample(
-                        text=sample_text,
-                        extra={"qid": item.get("qid", idx)}
-                    )
-                )
-            except Exception as e:
-                warnings.warn(f"Skipping sample {idx} due to error: {e}")
-                continue
-
-        return samples
 
     def build_input_text(self, item: Dict[str, Any]) -> str:
         clinical_summary = item.get("clinical_summary", "Not Provided")

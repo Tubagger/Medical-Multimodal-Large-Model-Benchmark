@@ -60,7 +60,7 @@ class MedReasonData(BaseDataset):
         # =========================
 
         result_path = f"logs/truthfulness/t2-logic/{model_id}/{dataset_id}.json"
-        processed_images = set()
+        processed_ids = set()
 
         if os.path.exists(result_path):
             with open(result_path, "r", encoding="utf-8") as f:
@@ -68,13 +68,10 @@ class MedReasonData(BaseDataset):
                 processed_samples = results.get("per_sample_results", [])
 
                 for item in processed_samples:
-                    image_path = item["content"]["image_path"]
-                    image_name = os.path.basename(image_path)
-                    processed_images.add(image_name)
-
-            print(f"✅ Loaded {len(processed_images)} cached samples")
-        else:
-            print("⚠️ No cached results found")
+                    id = item["id"]
+                    
+                    processed_ids.add(id)
+            print(f"✅ Loaded {len(processed_ids)} cached samples")
 
         # =========================
         # prompt template
@@ -95,9 +92,8 @@ class MedReasonData(BaseDataset):
 
         for sample in samples:
 
-            img_name = sample['image']
-
-            if img_name in processed_images:
+            id = sample['id']
+            if id in processed_ids:
                 continue
 
             # =========================
@@ -105,7 +101,6 @@ class MedReasonData(BaseDataset):
             # =========================
 
             image_name = sample["image"]
-
             image_path = os.path.join(
                 self.image_dir,
                 image_name
@@ -164,6 +159,7 @@ class MedReasonData(BaseDataset):
 
                 dataset.append(
                     TxtSample(
+                        id=id,
                         text=prompt,
                         target=answer,
                     )
@@ -177,6 +173,7 @@ class MedReasonData(BaseDataset):
 
                 dataset.append(
                     ImageTxtSample(
+                        id=id,
                         image_path=image_path,
                         text=prompt,
                         target=answer,
@@ -196,6 +193,7 @@ class MedReasonData(BaseDataset):
 
                 dataset.append(
                     ImageTxtSample(
+                        id=id,
                         image_path=unrelated_sample.image_path,
                         text=prompt,
                         target=answer,
@@ -203,21 +201,6 @@ class MedReasonData(BaseDataset):
                 )
 
         self.dataset = dataset
-
-    def _extract_answer_letter(self, options: str, full_answer: str):
-        lines = [l.strip() for l in options.split("\n") if "." in l]
-
-        full_answer = full_answer.lower()
-
-        for line in lines:
-            # line: "C. Colle's fascia"
-            letter = line.split(".")[0].strip()
-            text = ".".join(line.split(".")[1:]).strip().lower()
-
-            if text in full_answer:
-                return letter
-
-        return full_answer
 
     def __getitem__(self, index: int) -> _OutputType:
         if self.method_hook:
