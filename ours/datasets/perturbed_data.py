@@ -11,9 +11,15 @@ from itertools import islice
 class PerturbedDataset(BaseDataset):
 
     dataset_ids: Sequence[str] = [
-        "perturbed-data"
+        "perturbed-data",
+        "perturbed-data-clean",
     ]
     dataset_config: Optional[str] = "./ours/configs/datasets/perturbed-data.yaml"
+
+    dataset_config: Optional[Dict[str, str]] = { 
+        "perturbed-data": "./ours/configs/datasets/perturbed-data.yaml",
+        "perturbed-data-clean": "./ours/configs/datasets/perturbed-data-clean.yaml",
+    }
 
     def __init__(
         self,
@@ -27,7 +33,7 @@ class PerturbedDataset(BaseDataset):
         # =========================
         # load yaml config
         # =========================
-        with open(self.dataset_config) as f:
+        with open(self.dataset_config[dataset_id]) as f:
             self.config = yaml.load(f, Loader=yaml.FullLoader)
 
         self.image_dir = self.config.get('image_dir')
@@ -38,12 +44,8 @@ class PerturbedDataset(BaseDataset):
         assert os.path.exists(self.label_dir), f"❌ Label file not found: {self.label_dir}"
 
 
-        # =========================
-        # read TSV
-        # =========================
         with open(self.label_dir, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f, delimiter='\t')
-            samples = list(reader)
+            samples = json.load(f)
 
         assert self.nums <= len(samples), \
             f"❌ num ({self.nums}) > total samples ({len(samples)})"
@@ -72,69 +74,60 @@ class PerturbedDataset(BaseDataset):
         # =========================
         # prompt template
         # =========================
-        PROMPT = """
-        You are a clinical diagnostic assistant.
-        Given the following multiple-choice question, select the single best answer.
-
-        Rules:
-        - Only output one option letter: A, B, C, D, or E.
-        - Do not provide any explanation.
-        - Do not output anything else.
-        ### Question:
-        {question}
-        ### Options:
-        A. {A}
-        B. {B}
-        C. {C}
-        D. {D}
-        E. {E}
-        """
+        self.prompt_template = (
+            "Question:\n{question}\n\n"
+            "{options}\n\n"
+            "(Please directly answer with the correct "
+            "option letter without explanation.)"
+        )
 
         # =========================
-        # build dataset
+        # Build dataset
         # =========================
+
+        dataset = []
 
         for sample in samples:
 
-            # =========================
-            # skip cached sample
-            # =========================
-            id = sample.get('index')
+            id = sample['id']
             if id in processed_ids:
                 continue
-            
-            img_name = str(sample.get("index", "0")) + ".png"
-            image_path = os.path.join(self.image_dir, img_name)
 
             # =========================
-            # build prompt
+            # image
             # =========================
-            try:
 
-                prompt = PROMPT.format(
-                    question=sample.get("question", ""),
-                    A=sample.get("A", ""),
-                    B=sample.get("B", ""),
-                    C=sample.get("C", ""),
-                    D=sample.get("D", ""),
-                    E=sample.get("E", ""),
-                )
-
-            except Exception as e:
-
-                print(f"❌ [PROMPT ERROR] {e}")
-
-                continue
+            image_name = sample["image"]
+            image_path = os.path.join(
+                self.image_dir,
+                image_name
+            )
 
             # =========================
-            # append dataset
+            # question
             # =========================
+
+            question = sample["question"]
+
+            options = sample.get("options", "")
+
+            prompt = self.prompt_template.format(
+                question=question,
+                options=options
+            )
+
+            # =========================
+            # extract answer
+            # =========================
+
+            answer = sample.get("answer", "")
+
             dataset.append(
                 ImageTxtSample(
                     id=id,
                     image_path=image_path,
                     text=prompt,
-                    target=sample.get('answer', None),
+                    target=answer,
                 )
             )
 

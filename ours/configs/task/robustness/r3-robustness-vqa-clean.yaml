@@ -1,0 +1,14 @@
+dataset_id: "robustness-vqa-clean"
+model_id: "lingshu-32b"
+log_file: "./logs/robustness/r3-robustness-vqa/robustness-vqa-clean.json"
+
+generation_kwargs:
+  max_new_tokens: 128
+  do_sample: False
+
+
+evaluator_seq_cfgs: 
+  - rule_mcq_eval:
+      metrics_cfg: 
+        accuracy_score: {}
+ 

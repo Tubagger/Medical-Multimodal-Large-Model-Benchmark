@@ -1,4 +1,4 @@
-annotation_file: './data/safety/bap_jailbreak/med-safety-bench.csv'
+annotation_file: './data/safety/bap_jailbreak/safetyrisk_vqa.jsonl'
 image_dir: './data/safety/bap_jailbreak/images/'
-nums: 200
-#200
+nums: 210
+#210

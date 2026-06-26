@@ -1,0 +1,18 @@
+annotation_file: './data/truthfulness/anomaly_detection/CheXpert/labels.json'
+image_dir: './data/truthfulness/anomaly_detection/CheXpert/images'
+nums: 130
+#130
+keyword_map:
+  No Finding: []
+  Enlarged Cardiomediastinum: [enlarged mediastinum, mediastinal widening]
+  Cardiomegaly: [cardiomegaly, enlarged heart]
+  Lung Opacity: [lung opacity, opacity]
+  Lung Lesion: [lung lesion, mass, nodule]
+  Edema: [edema, pulmonary edema, fluid overload]
+  Consolidation: [consolidation]
+  Pneumonia: [pneumonia, infection]
+  Atelectasis: [atelectasis, collapse]
+  Pneumothorax: [pneumothorax, collapsed lung]
+  Pleural Effusion: [pleural effusion, effusion]
+  Pleural Other: [pleural abnormality, pleural disease]
+  Fracture: [fracture, rib fracture]

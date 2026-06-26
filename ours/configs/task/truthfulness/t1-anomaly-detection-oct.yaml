@@ -1,0 +1,23 @@
+dataset_id: "anomaly-detection-chexpert"
+model_id: "lingshu-32b"
+log_file: "./logs/truthfulness/t1-basic/anomaly-detection-chexpert.json"
+
+generation_kwargs: {
+    'max_new_tokens': 180,
+    'do_sample': False,
+}
+
+evaluator_seq_cfgs: 
+  - rule_anomaly_detection_eval: 
+      metrics_cfg:
+        multiclass_metrics: {}
+      
+      keyword_map:
+        NORMAL: [normal retina, healthy retina, no disease]
+        CNV: [choroidal neovascularization, CNV, wet AMD, neovascular AMD]
+        DME: [diabetic macular edema, DME, retinal edema, macula swelling]
+        DRUSEN: [drusen, dry AMD, age-related macular degeneration deposits]
+
+
+
+

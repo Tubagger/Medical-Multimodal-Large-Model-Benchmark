@@ -1,0 +1,32 @@
+dataset_id: "anomaly-detection-chexpert"
+model_id: "lingshu-32b"
+log_file: "./logs/truthfulness/t1-basic/anomaly-detection-chexpert.json"
+
+generation_kwargs: {
+    'max_new_tokens': 180,
+    'do_sample': False,
+}
+
+evaluator_seq_cfgs: 
+  - rule_anomaly_detection_eval: 
+      metrics_cfg:
+        multiclass_metrics: {}
+
+      keyword_map:
+        No Finding: ["No Finding"]
+        Enlarged Cardiomediastinum: ["Enlarged Cardiomediastinum"]
+        Cardiomegaly: ["Cardiomegaly"]
+        Lung Opacity: ["Lung Opacity"]
+        Lung Lesion: ["Lung Lesion"]
+        Edema: ["Edema"]
+        Consolidation: ["Consolidation"]
+        Pneumonia: ["Pneumonia"]
+        Atelectasis: ["Atelectasis"]
+        Pneumothorax: ["Pneumothorax"]
+        Pleural Effusion: ["Pleural Effusion"]
+        Pleural Other: ["Pleural Other"]
+        Fracture: ["Fracture"]
+
+
+
+

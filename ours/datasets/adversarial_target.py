@@ -1,5 +1,6 @@
+import random
 from torch.utils.data import DataLoader
-from typing import Optional, Sequence
+from typing import Dict, Optional, Sequence
 from ours.methods.base import BaseMethod
 from ours.datasets.base import BaseDataset, collate_fn
 from ours.methods import AdvGeneratedImage
@@ -12,14 +13,21 @@ import json
 @registry.register_dataset()
 class AdvTarget(BaseDataset):
 
-    dataset_ids: Sequence[str] = ["adv-target"]
+    dataset_ids: Sequence[str] = [
+        "adv-target-clean",
+        "adv-target",
+    ]
+    
+    dataset_config: Optional[Dict[str, str]] = { 
+        "adv-target-clean": "ours/configs/datasets/adv-target-clean.yaml",
+        "adv-target": "ours/configs/datasets/adv-target.yaml",
+    }
 
     def __init__(self, dataset_id: str, model_id: str, method_hook: Optional[BaseMethod] = None, **kwargs) -> None:
         super().__init__(dataset_id=dataset_id, model_id=model_id, method_hook=method_hook)
 
-        self.dataset_config: Optional[str] = "ours/configs/datasets/adv-target.yaml"
 
-        with open(self.dataset_config, "r") as f:
+        with open(self.dataset_config[dataset_id]) as f:
             self.config = yaml.load(f, Loader=yaml.FullLoader)
 
         self.generate_image = kwargs.get("generate_image", False)
@@ -55,32 +63,53 @@ class AdvTarget(BaseDataset):
                     processed_ids.add(id)
             print(f"✅ Loaded {len(processed_ids)} cached samples")
 
-        PROMPT = """
-            Given the image, identify the anatomical structure (organ, tissue, or region) and briefly describe its appearance.
-        """
+        # PROMPT = """
+        #     Given the image, identify the anatomical structure (organ, tissue, or region) and briefly describe its appearance.
+        # """
 
         dataset = []
 
         for sample in samples:
-            id = sample['image_id']
+            id = sample['id']
             if id in processed_ids:
                 continue
 
-            image_name = f"{id}.png"
+            image_name = sample['image']
             image_path = os.path.join(self.image_dir, image_name)
 
+                # 正确答案
             target = sample["target"][0] if isinstance(sample["target"], list) else sample["target"]
+
+            # 错误答案（假设 jsonl 中已有 untarget 字段）
+            untarget = sample["untarget"][0] if isinstance(sample["untarget"], list) else sample["untarget"]
+
+            # 随机决定 A/B 顺序
+            if random.random() < 0.5:
+                option_a = target
+                option_b = untarget
+                answer = "A"
+            else:
+                option_a = untarget
+                option_b = target
+                answer = "B"
+
+            prompt = f"""Given the image, which of the following anatomical structures is shown?
+            A. {option_a}
+            B. {option_b}
+            Please answer with only "A" or "B".
+            """
 
             dataset.append(
                 ImageTxtSample(
                     id=id,
                     image_path=image_path,
-                    text=PROMPT,
-                    target=target   
+                    text=prompt,
+                    target=answer,   # 正确答案标签，而不是器官名称
                 )
             )
 
         self.dataset = dataset
+
 
     # ========= jsonl reader =========
     def read_jsonl(self, json_file):

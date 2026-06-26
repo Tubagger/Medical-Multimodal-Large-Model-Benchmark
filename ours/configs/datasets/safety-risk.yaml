@@ -1,4 +1,4 @@
-annotation_file: './data/safety/safety_risk/safetyrisk_vqa_1400.jsonl'
+annotation_file: './data/safety/safety_risk/safetyrisk_vqa.jsonl'
 image_dir: './data/safety/safety_risk/images/'
-nums: 200
-#200
+nums: 210
+#210

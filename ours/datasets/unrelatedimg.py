@@ -14,8 +14,8 @@ class UnrelatedImageDataset(BaseDataset):
     dataset_ids: Sequence[str] = ["color", "nature", "noise"]
     dataset_config: Optional[str] = "ours/configs/datasets/unrelatedimg.yaml"
 
-    def __init__(self, dataset_id: str, method_hook: Optional[BaseMethod] = None, **kwargs) -> None:
-        super().__init__(dataset_id=dataset_id, method_hook=method_hook)
+    def __init__(self, model_id: str, dataset_id: str, method_hook: Optional[BaseMethod] = None, **kwargs) -> None:
+        super().__init__(model_id=model_id,dataset_id=dataset_id, method_hook=method_hook)
         with open(self.dataset_config) as f:
             self.config = yaml.load(f, Loader=yaml.FullLoader)
         

@@ -6,6 +6,55 @@ import numpy as np
 import json
 
 @registry.register_evaluator()
+class GenericSingleLabelEvaluator(BaseEvaluator):
+    evaluator_ids: List[str] = ['rule_anomaly_detection_eval']
+    def __init__(self, evaluator_id, metrics_cfg, keyword_map):
+        super().__init__(evaluator_id, metrics_cfg)
+        self.keyword_map = keyword_map
+        self.label_names = list(keyword_map.keys())
+
+    def _parse(self, pred):
+        pred_dict = {}
+
+        if isinstance(pred, str):
+            pred = re.sub(r"```json|```", "", pred).strip()
+            m = re.search(r"\{.*\}", pred, re.S)
+            if m:
+                pred = m.group()
+            try:
+                pred_dict = json.loads(pred)
+            except:
+                pass
+
+        return pred_dict
+
+    def _to_index(self, d):
+        vec = [int(d.get(k, 0)) for k in self.label_names]
+        return int(np.argmax(vec))
+
+    def process(self, preds, labels, extras):
+
+        y_pred, y_true, evals = [], [], []
+
+        for pred, label_dict in zip(preds, labels):
+
+            pred_dict = self._parse(pred)
+
+            pred_idx = self._to_index(pred_dict)
+            true_idx = self._to_index(label_dict)
+
+            y_pred.append(pred_idx)
+            y_true.append(true_idx)
+
+            evals.append({
+                "pred": pred_idx,
+                "gt": true_idx,
+                "match": pred_idx == true_idx
+            })
+
+        return np.array(y_pred), np.array(y_true), extras, evals
+
+@registry.register_evaluator()
 class CheXpertKeywordEvaluator(BaseEvaluator):
     evaluator_ids: List[str] = ['rule_chexpert_eval']
 
@@ -88,6 +137,121 @@ class CheXpertKeywordEvaluator(BaseEvaluator):
 
 
 
+# @registry.register_evaluator()
+# class BBoxEvaluator(BaseEvaluator):
+
+#     evaluator_ids: List[str] = ['rule_bbox_eval']
+
+#     def __init__(
+#         self,
+#         evaluator_id: str,
+#         metrics_cfg: Dict[str, Any],
+#     ) -> None:
+
+#         super().__init__(evaluator_id, metrics_cfg)
+
+#     def compute_iou(self, box1, box2):
+#         """
+#         box: [xmin, ymin, xmax, ymax]
+#         """
+
+#         if box1 is None or box2 is None:
+#             return 0.0
+
+#         x1 = max(box1[0], box2[0])
+#         y1 = max(box1[1], box2[1])
+#         x2 = min(box1[2], box2[2])
+#         y2 = min(box1[3], box2[3])
+
+#         inter_w = max(0.0, x2 - x1)
+#         inter_h = max(0.0, y2 - y1)
+
+#         inter_area = inter_w * inter_h
+
+#         area1 = max(0.0, box1[2] - box1[0]) * max(0.0, box1[3] - box1[1])
+#         area2 = max(0.0, box2[2] - box2[0]) * max(0.0, box2[3] - box2[1])
+
+#         union_area = area1 + area2 - inter_area
+
+#         if union_area <= 0:
+#             return 0.0
+
+#         return inter_area / union_area
+
+#     def process(
+#         self,
+#         preds: Sequence[Any],
+#         labels: Sequence[Any],
+#         extras: Sequence[Any]
+#     ) -> Tuple[Sequence[Any], Sequence[Any], Sequence[Any]]:
+
+#         processed_preds = []
+#         evals = []
+
+#         for pred, label, extra in zip(preds, labels, extras):
+
+#             pred_bbox = None
+
+#             try:
+
+#                 # =========================
+#                 # 情况1: pred已经是dict
+#                 # =========================
+#                 if isinstance(pred, dict):
+
+#                     pred_bbox = pred.get("bbox", None)
+
+#                 # =========================
+#                 # 情况2: pred是json/string
+#                 # =========================
+#                 elif isinstance(pred, str):
+
+#                     # 去掉 ```json ```
+#                     pred_clean = re.sub(
+#                         r"```json|```",
+#                         "",
+#                         pred
+#                     ).strip()
+
+#                     # 尝试json解析
+#                     try:
+#                         pred_dict = json.loads(pred_clean)
+
+#                         if isinstance(pred_dict, dict):
+#                             pred_bbox = pred_dict.get("bbox", None)
+
+#                     except Exception:
+
+#                         # 如果不是合法json
+#                         # 用正则提取 bbox
+#                         match = re.search(
+#                             r'"bbox"\s*:\s*\[([^\]]+)\]',
+#                             pred_clean
+#                         )
+
+#                         if match:
+
+#                             bbox_str = match.group(1)
+
+#                             pred_bbox = [
+#                                 float(x.strip())
+#                                 for x in bbox_str.split(",")
+#                             ]
+
+#             except Exception as e:
+#                 print(f"⚠️ bbox parse error: {e}")
+
+#             iou = self.compute_iou(pred_bbox, label)
+#             processed_preds.append(
+#                 self.compute_iou(pred_bbox, label)
+#             )
+#             evals.append({
+#                 'iou': str(iou),
+#                 'match':bool(iou>0.5)
+#             })
+
+#         return processed_preds, labels, extras, evals
+
 @registry.register_evaluator()
 class BBoxEvaluator(BaseEvaluator):
 
@@ -101,34 +265,144 @@ class BBoxEvaluator(BaseEvaluator):
 
         super().__init__(evaluator_id, metrics_cfg)
 
+    # ==========================================================
+    # IoU
+    # ==========================================================
     def compute_iou(self, box1, box2):
         """
-        box: [xmin, ymin, xmax, ymax]
+        box format:
+        [xmin, ymin, xmax, ymax]
         """
 
         if box1 is None or box2 is None:
             return 0.0
 
-        x1 = max(box1[0], box2[0])
-        y1 = max(box1[1], box2[1])
-        x2 = min(box1[2], box2[2])
-        y2 = min(box1[3], box2[3])
+        try:
 
-        inter_w = max(0.0, x2 - x1)
-        inter_h = max(0.0, y2 - y1)
+            x1 = max(float(box1[0]), float(box2[0]))
+            y1 = max(float(box1[1]), float(box2[1]))
+            x2 = min(float(box1[2]), float(box2[2]))
+            y2 = min(float(box1[3]), float(box2[3]))
 
-        inter_area = inter_w * inter_h
+            inter_w = max(0.0, x2 - x1)
+            inter_h = max(0.0, y2 - y1)
 
-        area1 = max(0.0, box1[2] - box1[0]) * max(0.0, box1[3] - box1[1])
-        area2 = max(0.0, box2[2] - box2[0]) * max(0.0, box2[3] - box2[1])
+            inter_area = inter_w * inter_h
 
-        union_area = area1 + area2 - inter_area
+            area1 = (
+                max(0.0, float(box1[2]) - float(box1[0]))
+                * max(0.0, float(box1[3]) - float(box1[1]))
+            )
 
-        if union_area <= 0:
+            area2 = (
+                max(0.0, float(box2[2]) - float(box2[0]))
+                * max(0.0, float(box2[3]) - float(box2[1]))
+            )
+
+            union_area = area1 + area2 - inter_area
+
+            if union_area <= 0:
+                return 0.0
+
+            return inter_area / union_area
+
+        except Exception as e:
+
+            print(f"⚠️ IoU error: {e}")
             return 0.0
 
-        return inter_area / union_area
+    # ==========================================================
+    # bbox解析
+    # ==========================================================
+    def extract_bbox(self, pred):
 
+        bbox = None
+
+        try:
+
+            # ----------------------------------
+            # Case 1: dict
+            # ----------------------------------
+            if isinstance(pred, dict):
+
+                bbox = pred.get("bbox", None)
+
+            # ----------------------------------
+            # Case 2: string
+            # ----------------------------------
+            else:
+
+                text = str(pred)
+
+                # 去 markdown
+                text = re.sub(
+                    r"```(?:json)?",
+                    "",
+                    text,
+                    flags=re.IGNORECASE
+                )
+
+                text = text.replace("```", "")
+
+                # 提取第一个 JSON 对象
+                json_match = re.search(
+                    r"\{.*\}",
+                    text,
+                    flags=re.S
+                )
+
+                if json_match:
+
+                    try:
+
+                        obj = json.loads(
+                            json_match.group(0)
+                        )
+
+                        if isinstance(obj, dict):
+                            bbox = obj.get("bbox", None)
+
+                    except Exception:
+                        pass
+
+                # fallback
+                if bbox is None:
+
+                    match = re.search(
+                        r'"bbox"\s*:\s*\[([^\]]+)\]',
+                        text
+                    )
+
+                    if match:
+
+                        bbox = [
+                            float(x.strip())
+                            for x in match.group(1).split(",")
+                        ]
+
+            # ----------------------------------
+            # bbox合法性检查
+            # ----------------------------------
+            if bbox is not None:
+
+                if (
+                    isinstance(bbox, (list, tuple))
+                    and len(bbox) == 4
+                ):
+                    bbox = [float(x) for x in bbox]
+                else:
+                    bbox = None
+
+        except Exception as e:
+
+            print(f"⚠️ bbox parse error: {e}")
+            bbox = None
+
+        return bbox
+
+    # ==========================================================
+    # process
+    # ==========================================================
     def process(
         self,
         preds: Sequence[Any],
@@ -139,69 +413,43 @@ class BBoxEvaluator(BaseEvaluator):
         processed_preds = []
         evals = []
 
-        for pred, label, extra in zip(preds, labels, extras):
+        for pred, label, extra in zip(
+            preds,
+            labels,
+            extras
+        ):
 
-            pred_bbox = None
+            pred_bbox = self.extract_bbox(pred)
 
-            try:
+            # ==================================================
+            # label兼容
+            # ==================================================
 
-                # =========================
-                # 情况1: pred已经是dict
-                # =========================
-                if isinstance(pred, dict):
+            if (
+                isinstance(label, list)
+                and len(label) == 1
+                and isinstance(label[0], list)
+            ):
+                label = label[0]
 
-                    pred_bbox = pred.get("bbox", None)
-
-                # =========================
-                # 情况2: pred是json/string
-                # =========================
-                elif isinstance(pred, str):
-
-                    # 去掉 ```json ```
-                    pred_clean = re.sub(
-                        r"```json|```",
-                        "",
-                        pred
-                    ).strip()
-
-                    # 尝试json解析
-                    try:
-                        pred_dict = json.loads(pred_clean)
-
-                        if isinstance(pred_dict, dict):
-                            pred_bbox = pred_dict.get("bbox", None)
-
-                    except Exception:
-
-                        # 如果不是合法json
-                        # 用正则提取 bbox
-                        match = re.search(
-                            r'"bbox"\s*:\s*\[([^\]]+)\]',
-                            pred_clean
-                        )
-
-                        if match:
-
-                            bbox_str = match.group(1)
-
-                            pred_bbox = [
-                                float(x.strip())
-                                for x in bbox_str.split(",")
-                            ]
-
-            except Exception as e:
-                print(f"⚠️ bbox parse error: {e}")
-
-            iou = self.compute_iou(pred_bbox, label)
-            processed_preds.append(
-                self.compute_iou(pred_bbox, label)
+            iou = self.compute_iou(
+                pred_bbox,
+                label
             )
+
+            processed_preds.append(iou)
+
             evals.append({
-                'iou': str(iou),
-                'match':bool(iou>0.5)
+                "iou": str(iou),
+                "match": bool(iou > 0.5)
             })
 
-        return processed_preds, labels, extras, evals
+        return (
+            processed_preds,
+            labels,
+            extras,
+            evals
+        )
 
 @registry.register_evaluator()
 class GenericMCQEvaluator(BaseEvaluator):
@@ -243,53 +491,138 @@ class GenericMCQEvaluator(BaseEvaluator):
         # 3) fallback：默认 A..H（可调）
         return self.all_options[:default_max]
 
-    def _normalize_label(self, label: Any, valid_options: List[str]) -> Optional[str]:
-        """
-        label 可能是 "D" / "D." / "(D)" / "Answer: D"
-        """
-        if not isinstance(label, str):
-            return None
-        text = label.strip().upper()
-        # 找第一个合法选项字母
-        m = re.search(r"\b([A-Z])\b", text)
-        if m and m.group(1) in valid_options:
-            return m.group(1)
-        # 兜底：取首字符
-        if text and text[0] in valid_options:
-            return text[0]
-        return None
+    def _normalize_label(self, label: Any, valid_options: List[str]) -> Optional[List[str]]:
 
-    def extract_option(self, text: Any, valid_options: List[str]) -> Optional[str]:
         """
-        从模型输出中抽取选项字母。
-        策略：
-        1) 优先匹配 “ANSWER: X / FINAL: X / SELECT: X” 等强信号
-        2) 其次匹配独立字母边界（避免把 'BARRETT' 里的 A 误判）
-        3) 若输出包含多个字母（如 "A or C"），优先取强信号，否则取最后一次出现的独立选项
+        Normalize single-label or multi-label answers.
+        Supports:
+        - "B"
+        - "B C D"
+        - ["B","C","D"]   ✔ NEW supported
         """
+
+        if label is None:
+            return None
+
+        # =========================
+        # ✔ NEW: already list input
+        # =========================
+        if isinstance(label, list):
+            labels = [str(x).upper() for x in label]
+        else:
+            if not isinstance(label, str):
+                return None
+            labels = re.findall(r"[A-Z]", label.upper())
+
+        # =========================
+        # filter valid options
+        # =========================
+        labels = [m for m in labels if m in valid_options]
+
+        if not labels:
+            return None
+
+        # =========================
+        # deduplicate (keep order)
+        # =========================
+        seen = set()
+        result = []
+        for x in labels:
+            if x not in seen:
+                seen.add(x)
+                result.append(x)
+
+        return result
+
+    def _extract_option(
+        self,
+        text: Any,
+        valid_options: List[str]
+    ) -> Optional[List[str]]:
+
         if not isinstance(text, str):
             return None
+
         t = text.strip().upper()
+
         if not t:
             return None
 
-        # 1) 强信号：Answer/Final/Choice/Option 后面跟字母
-        strong_patterns = [
-            r"(?:FINAL|ANSWER|ANS|CHOICE|OPTION|SELECT(?:ED)?)\s*[:\-]?\s*[\(\[]?\s*([A-Z])\s*[\)\]]?",
-        ]
-        for p in strong_patterns:
-            m = re.search(p, t)
-            if m:
-                ch = m.group(1)
-                return ch if ch in valid_options else None
+        # =========================
+        # 去掉前缀
+        # =========================
+        m = re.search(
+            r"(?:FINAL ANSWER|FINAL|ANSWER|ANS|CHOICE|OPTION|SELECT(?:ED)?|THE ANSWER IS)\s*[:\-]?\s*(.+)",
+            t,
+        )
 
-        # 2) 常见格式：(A) / A. / - A / [A]
-        m = re.findall(r"[\(\[\{]?\s*([A-Z])\s*[\)\]\}]?(?:\s*[\.\:])?\b", t)
-        # 过滤到 valid_options
-        m = [ch for ch in m if ch in valid_options]
         if m:
-            # 取最后一个出现的（很多模型最后会总结 “So the answer is D”）
-            return m[-1]
+            t = m.group(1).strip()
+
+        # =========================
+        # Case 1:
+        # A: xxx
+        # B. xxx
+        # C) xxx
+        # =========================
+        m = re.match(
+            rf"^\s*({'|'.join(valid_options)})\s*[:.)]",
+            t
+        )
+
+        if m:
+            return [m.group(1)]
+
+        # =========================
+        # Case 2:
+        # A
+        # B
+        # =========================
+        if t in valid_options:
+            return [t]
+
+        # =========================
+        # Case 3:
+        # A,C,D
+        # A C D
+        # A/B/D
+        # =========================
+        labels = re.findall(
+            rf"\b({'|'.join(valid_options)})\b",
+            t
+        )
+
+        if labels:
+            seen = set()
+            result = []
+
+            for x in labels:
+                if x not in seen:
+                    seen.add(x)
+                    result.append(x)
+
+            return result
+
+        # =========================
+        # Case 4:
+        # ABCD
+        # BCD
+        # =========================
+        compact = t.replace(" ", "")
+
+        if (
+            len(compact) > 1
+            and all(ch in valid_options for ch in compact)
+        ):
+            seen = set()
+            result = []
+
+            for ch in compact:
+                if ch not in seen:
+                    seen.add(ch)
+                    result.append(ch)
+
+            return result
 
         return None
 
@@ -300,18 +633,22 @@ class GenericMCQEvaluator(BaseEvaluator):
 
         for pred, label, extra in zip(preds, labels, extras):
             valid_options = self._infer_valid_options(extra)
-
             true_opt = self._normalize_label(label, valid_options)
-            pred_opt = self.extract_option(pred, valid_options)
+            pred_opt = self._extract_option(pred, valid_options)
 
-            # 你原来用 y_true 全 1 的设计（把 accuracy 当成“是否命中”）是可以的
-            # 这里保持一致：y_true 固定 1，y_pred 为 1/0
+            # =========================
+            # normalize to set（关键最小修改）
+            # =========================
+            true_set = set(true_opt) if true_opt else set()
+            pred_set = set(pred_opt) if pred_opt else set()
+
             y_true.append(1)
-            y_pred.append(1 if (true_opt is not None and pred_opt == true_opt) else 0)
+
+            y_pred.append(1 if true_set == pred_set else 0)
             evals.append({
                 'pred_opt': str(pred_opt),
                 'true_opt': str(true_opt),
-                'match': bool(pred_opt == true_opt)
+                'match': bool(1 if true_set == pred_set else 0)
             
             })
 

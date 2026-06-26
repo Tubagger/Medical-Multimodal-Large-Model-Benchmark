@@ -54,7 +54,7 @@ class BaseTask(ABC):
         method_kwargs = self.method_cfg[method_id]
   
         method_cls = registry.get_method_class(method_id)
-        method = method_cls(method_id, **method_kwargs)
+        method = method_cls(self.model_id ,method_id, **method_kwargs)
         return method
     
     def get_orchestrator(self) -> BaseOrchestrator:

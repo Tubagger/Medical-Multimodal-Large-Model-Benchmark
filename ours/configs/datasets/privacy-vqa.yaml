@@ -1,3 +1,4 @@
-annotation_file: './data/privacy/privacy_vqa/questions.json'
+annotation_file: './data/privacy/privacy_vqa/privacy_vqa.json'
 image_dir: './data/privacy/privacy_vqa/images/'
-nums: 1
+nums: 81
+#81

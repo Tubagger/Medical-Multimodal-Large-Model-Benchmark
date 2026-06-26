@@ -1,0 +1,15 @@
+annotation_file: './data/truthfulness/anomaly_detection/ISIC/labels.json'
+image_dir: './data/truthfulness/anomaly_detection/ISIC/images'
+nums: 90
+#90
+
+keyword_map:
+  actinic keratosis: [actinic keratosis, ak, solar keratosis, sun damage lesion]
+  basal cell carcinoma: [basal cell carcinoma, bcc, rodent ulcer]
+  dermatofibroma: [dermatofibroma, benign fibrous histiocytoma]
+  melanoma: [melanoma, malignant melanoma, cutaneous melanoma]
+  nevus: [nevus, mole, melanocytic nevus, common nevus]
+  pigmented benign keratosis: [pigmented benign keratosis, seborrheic keratosis pigmented, benign keratosis]
+  seborrheic keratosis: [seborrheic keratosis, SK, verrucous keratosis]
+  squamous cell carcinoma: [squamous cell carcinoma, SCC, cutaneous SCC]
+  vascular lesion: [vascular lesion, hemangioma, angioma, cherry angioma]

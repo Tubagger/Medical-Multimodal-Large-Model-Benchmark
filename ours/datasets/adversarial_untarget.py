@@ -1,5 +1,6 @@
+import random
 from torch.utils.data import DataLoader
-from typing import Optional, Sequence
+from typing import Dict, Optional, Sequence
 from ours.methods.base import BaseMethod
 from ours.datasets.base import BaseDataset, collate_fn
 from ours.methods import AdvGeneratedImage
@@ -12,14 +13,21 @@ import json
 @registry.register_dataset()
 class AdvUnTarget(BaseDataset):
 
-    dataset_ids: Sequence[str] = ["adv-untarget"]
+    dataset_ids: Sequence[str] = [
+        "adv-untarget-clean",
+        "adv-untarget",
+    ]
+    
+    dataset_config: Optional[Dict[str, str]] = { 
+        "adv-untarget-clean": "ours/configs/datasets/adv-untarget-clean.yaml",
+        "adv-untarget": "ours/configs/datasets/adv-untarget.yaml",
+    }
+
 
     def __init__(self, dataset_id: str, model_id: str, method_hook: Optional[BaseMethod] = None, **kwargs) -> None:
         super().__init__(dataset_id=dataset_id, model_id=model_id, method_hook=method_hook)
 
-        self.dataset_config: Optional[str] = "ours/configs/datasets/adv-untarget.yaml"
-
-        with open(self.dataset_config, "r") as f:
+        with open(self.dataset_config[dataset_id]) as f:
             self.config = yaml.load(f, Loader=yaml.FullLoader)
 
         # ========= dirs =========
@@ -41,6 +49,23 @@ class AdvUnTarget(BaseDataset):
         # =========================
         result_path = f"logs/robustness/r2-adv-attack/{model_id}/{dataset_id}.json"
         processed_ids = set()
+        
+        ORGANS = [
+            "brain",
+            "retina",
+            "chest",
+            "lung",
+            "heart",
+            "liver",
+            "kidney",
+            "stomach",
+            "bladder",
+            "uterus",
+            "prostate",
+            "femur",
+            "humerus",
+            "skin",
+        ]
 
         if os.path.exists(result_path):
             with open(result_path, "r", encoding="utf-8") as f:
@@ -53,28 +78,49 @@ class AdvUnTarget(BaseDataset):
                     processed_ids.add(id)
             print(f"✅ Loaded {len(processed_ids)} cached samples")
 
-        PROMPT = """
-            Given the image, identify the anatomical structure (organ, tissue, or region) and briefly describe its appearance.
-        """
+        # PROMPT = """
+        #     Given the image, identify the anatomical structure (organ, tissue, or region) and briefly describe its appearance.
+        # """
 
         dataset = []
 
         for sample in samples:
-            id = sample['image_id']
+            id = sample['id']
             if id in processed_ids:
                 continue
 
-            image_name = f"{id}.png"
+            image_name = sample['image']
             image_path = os.path.join(self.image_dir, image_name)
 
-            untarget = sample["untarget"][0] if isinstance(sample["untarget"], list) else sample["untarget"]
+            # untarget 类别
+            untarget = sample["target"][0] if isinstance(sample["target"], list) else sample["target"]
+
+            # 从其余类别中随机选择一个作为正确类别
+            candidates = [x for x in ORGANS if x != untarget]
+            correct = random.choice(candidates)
+
+            # 随机决定 A/B 顺序
+            if random.random() < 0.5:
+                option_a = correct
+                option_b = untarget
+                answer = "A"
+            else:
+                option_a = untarget
+                option_b = correct
+                answer = "B"
+
+            prompt = f"""Given the image, which anatomical structure is shown?
+                A. {option_a}
+                B. {option_b}
+                Please answer with only "A" or "B".
+                """
 
             dataset.append(
                 ImageTxtSample(
                     id=id,
                     image_path=image_path,
-                    text=PROMPT,
-                    target=untarget   
+                    text=prompt,
+                    target=answer,  # 正确答案对应的选项
                 )
             )
 

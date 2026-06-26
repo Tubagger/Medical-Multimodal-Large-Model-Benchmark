@@ -1,4 +1,4 @@
-annotation_file: './data/truthfulness/logical_reasoning/MedReason_vqa.json'
+annotation_file: './data/truthfulness/logical_reasoning/labels.json'
 image_dir: './data/truthfulness/logical_reasoning/images'
-nums: 200
-#200
+nums: 180
+#180

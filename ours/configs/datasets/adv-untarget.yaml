@@ -1,5 +1,4 @@
-clean_image_dir: './data/robustness/adv_attack/adv_images/clean'
-untarget_image_dir: './data/robustness/adv_attack/adv_images/untarget'
+clean_image_dir: './data/robustness/adv_attack/images/clean'
+untarget_image_dir: './data/robustness/adv_attack/images/untarget'
 annotation_file: './data/robustness/adv_attack/labels.jsonl'
-nums: 99
-#99
+nums: 30

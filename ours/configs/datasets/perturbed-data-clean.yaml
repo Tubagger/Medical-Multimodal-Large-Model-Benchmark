@@ -1,0 +1,4 @@
+annotation_file: './data/robustness/perturbed/clean/labels.json'
+image_dir: './data/robustness/perturbed/clean/images/'
+nums: 210
+#210

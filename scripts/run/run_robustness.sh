@@ -9,9 +9,21 @@ model_id=$1
 
 dataset_ids=(
     # "ood"
+    
+    # "perturbed-data-clean"
     # "perturbed-data"
-    "adv-target"
-    "adv-untarget"
+
+    # "adv-target-clean"
+    # "adv-untarget-clean"
+    # "adv-target"
+    # "adv-untarget"
+
+    "robustness-vqa-clean"
+    "robustness-vqa-answer-flip"
+    "robustness-vqa-question-negation"
+    "robustness-vqa-option-expansion"
+    "robustness-vqa-narrative-distraction"
+    "robustness-vqa"
 )
 
 for dataset_id in "${dataset_ids[@]}"; do
@@ -26,9 +38,31 @@ for dataset_id in "${dataset_ids[@]}"; do
     elif [[ "$dataset_id" == "adv-untarget" ]]; then
         config="ours/configs/task/robustness/r2-adv-untarget.yaml"
         log_dir="logs/robustness/r2-adv-attack"
-    else
+    elif [[ "$dataset_id" == "adv-target-clean" ]]; then
+        config="ours/configs/task/robustness/r2-adv-target.yaml"
+        log_dir="logs/robustness/r2-adv-attack"
+    elif [[ "$dataset_id" == "adv-untarget-clean" ]]; then
+        config="ours/configs/task/robustness/r2-adv-untarget.yaml"
+        log_dir="logs/robustness/r2-adv-attack"
+    elif [[ "$dataset_id" == "perturbed-data" ]]; then
         config="ours/configs/task/robustness/r3-perturbed-data.yaml"
         log_dir="logs/robustness/r3-perturbed"
+
+    elif [[ "$dataset_id" == "robustness-vqa" ]]; then
+        
+        python ours/utils/robustness_utils.py \
+            --json_files \
+            "logs/robustness/r3-robustness-vqa/${model_id}/robustness-vqa-answer-flip.json" \
+            "logs/robustness/r3-robustness-vqa/${model_id}/robustness-vqa-question-negation.json" \
+            "logs/robustness/r3-robustness-vqa/${model_id}/robustness-vqa-option-expansion.json" \
+            "logs/robustness/r3-robustness-vqa/${model_id}/robustness-vqa-narrative-distraction.json" \
+            --output_file \
+            "logs/robustness/r3-robustness-vqa/${model_id}/robustness-vqa.json"
+        continue
+
+    else  
+        config="ours/configs/task/robustness/r3-${dataset_id}.yaml"
+        log_dir="logs/robustness/r3-robustness-vqa"
     fi
 
     python run_task.py \

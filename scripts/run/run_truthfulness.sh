@@ -8,8 +8,12 @@ fi
 model_id=$1
 
 dataset_ids=(
-    # "anomaly-detection"
-    # "lesion-localization"
+    "anomaly-detection-brain"
+    "anomaly-detection-chexpert"
+    "anomaly-detection-isic"
+    "anomaly-detection-mura"
+    "anomaly-detection-oct"
+    "lesion-localization"
     "logical-reasoning"
 )
 

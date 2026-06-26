@@ -11,25 +11,22 @@ import os
 @registry.register_dataset()
 class AnomalyData(BaseDataset):
     dataset_ids: Sequence[str] = [
-        "anomaly-detection"
+        "anomaly-detection-chexpert",
+        "anomaly-detection-isic",
+        "anomaly-detection-brain",
+        "anomaly-detection-mura",
+        "anomaly-detection-oct"
     ]
     
     dataset_config: Optional[Dict[str, str]] = { 
-        "anomaly-detection": "./ours/configs/datasets/anomaly-detection.yaml"
+        "anomaly-detection-chexpert": "./ours/configs/datasets/anomaly-detection-chexpert.yaml",
+        "anomaly-detection-isic": "./ours/configs/datasets/anomaly-detection-isic.yaml",
+        "anomaly-detection-brain": "./ours/configs/datasets/anomaly-detection-brain.yaml",
+        "anomaly-detection-mura": "./ours/configs/datasets/anomaly-detection-mura.yaml",
+        "anomaly-detection-oct": "./ours/configs/datasets/anomaly-detection-oct.yaml"
     }
 
-    # 可选：定义关键词 map 用于评估报告或文本匹配
-    keyword_map = {
-        "Atelectasis": ["atelectasis", "collapse"],
-        "Cardiomegaly": ["cardiomegaly", "enlarged heart"],
-        "Consolidation": ["consolidation"],
-        "Edema": ["edema", "fluid overload", "pulmonary edema"],
-        "Pleural Effusion": ["effusion", "pleural effusion"],
-        "Pneumonia": ["pneumonia", "infection"],
-        "Pneumothorax": ["pneumothorax", "collapsed lung"],
-        "Fracture": ["fracture", "broken rib"],
-        "Support Devices": ["pacemaker", "tube", "catheter"],
-    }
+
 
     def __init__(self, dataset_id: str, model_id: str, method_hook: Optional[BaseMethod] = None, **kwargs) -> None:
         super().__init__(dataset_id=dataset_id, model_id=model_id, method_hook=method_hook)
@@ -40,6 +37,18 @@ class AnomalyData(BaseDataset):
         self.image_dir = self.config.get('image_dir')
         self.label_dir = self.config.get('annotation_file')
         self.nums = self.config.get('nums')
+        self.keyword_map = self.config.get("keyword_map",
+        {
+        "Atelectasis": ["atelectasis", "collapse"],
+        "Cardiomegaly": ["cardiomegaly", "enlarged heart"],
+        "Consolidation": ["consolidation"],
+        "Edema": ["edema", "fluid overload", "pulmonary edema"],
+        "Pleural Effusion": ["effusion", "pleural effusion"],
+        "Pneumonia": ["pneumonia", "infection"],
+        "Pneumothorax": ["pneumothorax", "collapsed lung"],
+        "Fracture": ["fracture", "broken rib"],
+        "Support Devices": ["pacemaker", "tube", "catheter"],
+        })
 
         assert os.path.exists(self.image_dir), f"❌ Image directory not found: {self.image_dir}"
         assert os.path.exists(self.label_dir), f"❌ Label file not found: {self.label_dir}"
@@ -73,31 +82,53 @@ class AnomalyData(BaseDataset):
         # question template
         # =========================
 
-        PROMPT = """
-            You are a medical classification model for CheXpert. 
-            Given a chest X-ray image, classify the following 13 conditions.
-            You MUST output a pure JSON object with exactly these keys, no explanations, no extra text:
-            {
-            "No Finding": 0 or 1,
-            "Enlarged Cardiomediastinum": 0 or 1,
-            "Cardiomegaly": 0 or 1,
-            "Lung Opacity": 0 or 1,
-            "Lung Lesion": 0 or 1,
-            "Edema": 0 or 1,
-            "Consolidation": 0 or 1,
-            "Pneumonia": 0 or 1,
-            "Atelectasis": 0 or 1,
-            "Pneumothorax": 0 or 1,
-            "Pleural Effusion": 0 or 1,
-            "Pleural Other": 0 or 1,
-            "Fracture": 0 or 1
-            }
-            Rules:
-            1. Output strictly JSON only. No Markdown, no code block, no commentary.
-            2. Each value MUST be either 0 or 1 (integers, not strings).
-            3. If ANY disease key has value 1, then "No Finding" MUST be 0.
-            4. If ALL disease keys are 0, then "No Finding" MUST be 1.
-            Now produce the JSON result for this image:
+        # PROMPT = """
+        #     You are a medical classification model for CheXpert. 
+        #     Given a chest X-ray image, classify the following 13 conditions.
+        #     You MUST output a pure JSON object with exactly these keys, no explanations, no extra text:
+        #     {
+        #     "No Finding": 0 or 1,
+        #     "Enlarged Cardiomediastinum": 0 or 1,
+        #     "Cardiomegaly": 0 or 1,
+        #     "Lung Opacity": 0 or 1,
+        #     "Lung Lesion": 0 or 1,
+        #     "Edema": 0 or 1,
+        #     "Consolidation": 0 or 1,
+        #     "Pneumonia": 0 or 1,
+        #     "Atelectasis": 0 or 1,
+        #     "Pneumothorax": 0 or 1,
+        #     "Pleural Effusion": 0 or 1,
+        #     "Pleural Other": 0 or 1,
+        #     "Fracture": 0 or 1
+        #     }
+        #     Rules:
+        #     1. Output strictly JSON only. No Markdown, no code block, no commentary.
+        #     2. Each value MUST be either 0 or 1 (integers, not strings).
+        #     3. If ANY disease key has value 1, then "No Finding" MUST be 0.
+        #     4. If ALL disease keys are 0, then "No Finding" MUST be 1.
+        #     Now produce the JSON result for this image:
+        # """
+
+        labels = list(self.keyword_map.keys())
+
+        PROMPT = f"""
+        You are a medical classification model.
+
+        Given a medical image, classify the following conditions.
+
+        You MUST output a pure JSON object with exactly these keys, no explanations, no extra text:
+
+        {{
+        {chr(10).join([f'"{k}": 0 or 1,' for k in labels])}
+        }}
+
+        Rules:
+        1. Output strictly JSON only. No Markdown, no code block, no commentary.
+        2. Each value MUST be either 0 or 1 (integers, not strings).
+        3. Multi-label classification is allowed.
+        4. If all values are 0, it means no abnormal finding.
+
+        Now produce the JSON result for this image:
         """
 
         # =========================

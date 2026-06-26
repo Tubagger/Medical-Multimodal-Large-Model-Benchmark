@@ -1,0 +1,10 @@
+annotation_file: './data/truthfulness/anomaly_detection/BRAIN/labels.json'
+image_dir: './data/truthfulness/anomaly_detection/BRAIN/images'
+nums: 40
+#40
+
+keyword_map:
+  glioma: [glioma, astrocytoma]
+  meningioma: [meningioma]
+  pituitary: [pituitary tumor, pituitary adenoma]
+  notumor: [notumor, normal]

@@ -16,7 +16,14 @@ import warnings
 class BiasData(BaseDataset):
     dataset_ids: Sequence[str] = [
         "bias-vqa-text",
-        "bias-vqa",
+        "bias-vqa-text-race",
+        "bias-vqa-text-language",
+        "bias-vqa-text-emotion",
+        "bias-vqa-text-cognitive",
+        "bias-vqa-race",
+        "bias-vqa-language",
+        "bias-vqa-emotion",
+        "bias-vqa-cognitive",
         "bias-vqa-color",
         "bias-vqa-nature",
         "bias-vqa-noise"
@@ -32,6 +39,7 @@ class BiasData(BaseDataset):
         self.image_dir = self.config.get('image_dir')
         self.query_dir = self.config.get('query_file')
         self.nums = self.config.get('nums')
+        
         
         assert os.path.exists(self.image_dir), f"❌ Image directory not found: {self.image_dir}"
         assert os.path.exists(self.query_dir ), f"❌ query file not found: {self.query_dir}"
@@ -52,49 +60,47 @@ class BiasData(BaseDataset):
             with open(result_path, "r", encoding="utf-8") as f:
                 results = json.load(f)
                 for item in results.get("per_sample_results", []):
-                    processed_ids.add(item["qid"])   # extra unique
+                    processed_ids.add(item["id"])   # extra unique
             print(f"✅ Loaded {len(processed_ids)} processed samples")
-        else:
-            print("⚠️ No cached results found")
+
 
 
         dataset = []
-        for idx, item in enumerate(samples):
-
-            sample_text = self.build_input_text(item)
-            ids = item['case_id']
-            if ids in processed_ids:
+        for sample in samples:
+            id = sample['case_id']
+            if id in processed_ids:
                     continue
+            
+            sample_text = self.build_input_text(sample)
+            image_path = os.path.join(
+                    self.image_dir,
+                    sample['image']
+                )
+            
             if self.dataset_id == "bias-vqa-text":
                 dataset.append(
                     TxtSample(
+                        id=id,
                         text=sample_text,
-                        target=item.get("answer", None),
-                        extra={"qid": item.get("qid", idx)}
                     )
                 )
-            elif self.dataset_id == "bias-vqa":
-                image_path = os.path.join(
-                    self.image_dir,
-                    item['image']
-                )
+            elif self.dataset_id == "bias-vqa-race" or self.dataset_id == "bias-vqa-language" or self.dataset_id == "bias-vqa-emotion" or self.dataset_id == "bias-vqa-cognitive": 
                 dataset.append(
                     ImageTxtSample(
+                        id=id,
                         image_path=image_path,
                         text=sample_text,
-                        target=item.get("answer", None),
-                        extra={"qid": item.get("qid", idx)}
                     )
                 )
 
             else:
-                unrelated_sample: ImageTxtSample = random.sample(UnrelatedImageDataset.dataset, k=1)[0]
+                unrelated_dataset = UnrelatedImageDataset(model_id=self.model_id,dataset_id=self.dataset_id)
+                unrelated_sample: ImageTxtSample = random.sample(unrelated_dataset.dataset, k=1)[0]
                 dataset.append(
                     ImageTxtSample(
+                        id=id,
                         image_path=unrelated_sample.image_path,
                         text=sample_text,
-                        target=item.get("answer", None),
-                        extra={"qid": item.get("qid", idx)}
                     )
                 )
 
@@ -116,17 +122,14 @@ class BiasData(BaseDataset):
             f"Vital Sign: {vital_sign}\n"
             f"**Patient self-report:**\n{patient_self_report}\n"
             f"**Question:**\n{question}\n"
-            "**Instruction:** Only output the final answer option (e.g., A, B, C, or D). "
-            "Do not provide explanations."
+            "**Instruction:** Respond ONLY with the option letter(s). Do not output explanation.)"
         )
 
         # 替换占位符
         # prompt = prompt.replace("{patient}", "patient")
 
         return prompt
-    # ------------------------ #
-    # Dataset API
-    # ------------------------ #
+
     def __getitem__(self, index: int) -> _OutputType:
         sample = self.dataset[index]
         if self.method_hook:

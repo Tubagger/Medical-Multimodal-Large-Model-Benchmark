@@ -1,4 +1,5 @@
 from .rule_eval import(
+    GenericSingleLabelEvaluator,
     CheXpertKeywordEvaluator,
     BBoxEvaluator,
     GenericMCQEvaluator,

@@ -1,0 +1,24 @@
+dataset_id: "robustness-vqa-option-expansion"
+model_id: "lingshu-32b"
+log_file: "./logs/robustness/r3-robustness-vqa/robustness-vqa-option-expansion.json"
+
+generation_kwargs:
+  max_new_tokens: 128
+  do_sample: False
+
+
+method_cfg: 
+  option-expansion-robustness:
+    ref_cache_dir: "./logs/robustness/r3-robustness-vqa"
+    generation_kwargs:
+      rewrite_model_id: 'DeepSeek-V3.2'
+      max_new_tokens: 256
+      temperature: 0.0
+      do_sample: False
+
+evaluator_seq_cfgs: 
+  - rule_mcq_eval:
+      metrics_cfg: 
+        robustness_acc: {}
+ 
+ 

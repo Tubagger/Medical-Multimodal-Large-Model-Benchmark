@@ -10,34 +10,39 @@ def load_json(path):
 
 def compute_score(model_id):
     """
-    OOD Generalization:
-        accuracy
+    =========================
+    3-Aspect Robustness Metric
+    =========================
 
-    Target Attack Robustness:
-        1 - target ASR
+    1. Generalization:
+        - OOD accuracy
 
-    Untarget Attack Robustness:
-        1 - untarget ASR
+    2. Adversarial Robustness:
+        - computed from clean and attacked accuracy
 
-    Perturbation Robustness:
-        1 - ASR
+    3. Perturbation Robustness:
+        - 1 - perturb accuracy (保持原逻辑)
 
-    Overall Robustness:
-        average of all robustness metrics
-
-    Final Score = Overall * 100
+    Final Score = mean(3 aspects) * 100
     """
 
     # =========================
-    # 文件路径
+    # File Paths
     # =========================
-
     ood_file = Path(
         f"logs/robustness/r1-ood/{model_id}/ood.json"
     )
 
+    target_clean_file = Path(
+        f"logs/robustness/r2-adv-attack/{model_id}/adv-target-clean.json"
+    )
+
     target_attack_file = Path(
         f"logs/robustness/r2-adv-attack/{model_id}/adv-target.json"
+    )
+
+    untarget_clean_file = Path(
+        f"logs/robustness/r2-adv-attack/{model_id}/adv-untarget-clean.json"
     )
 
     untarget_attack_file = Path(
@@ -49,114 +54,116 @@ def compute_score(model_id):
     )
 
     # =========================
-    # 检查文件
+    # Check files
     # =========================
-
     for file in [
         ood_file,
+        target_clean_file,
         target_attack_file,
+        untarget_clean_file,
         untarget_attack_file,
-        perturb_file
+        perturb_file,
     ]:
         if not file.exists():
-            raise FileNotFoundError(
-                f"Missing file: {file}"
-            )
+            raise FileNotFoundError(f"Missing file: {file}")
 
     # =========================
-    # 读取 JSON
+    # Load JSON
     # =========================
-
     ood = load_json(ood_file)
+
+    target_clean = load_json(target_clean_file)
     target_attack = load_json(target_attack_file)
+
+    untarget_clean = load_json(untarget_clean_file)
     untarget_attack = load_json(untarget_attack_file)
+
     perturb = load_json(perturb_file)
 
     # =========================
-    # OOD Generalization
+    # 1. Generalization (OOD)
     # =========================
-
-    ood_generalization = (
-        ood["total_results"]
-        ["rule_mcq_eval:accuracy_score"]
-    )
+    generalization = ood["total_results"]["rule_mcq_eval:accuracy_score"]
 
     # =========================
-    # Target Attack Robustness
+    # 2. Adversarial Robustness
     # =========================
+    target_clean_acc = 1 - target_clean["total_results"]["rule_mcq_eval:accuracy_score"]
+    target_attack_acc = 1 - target_attack["total_results"]["rule_mcq_eval:accuracy_score"]
 
-    target_asr = (
-        target_attack["total_results"]
-        ["chat_target_accuracy:asr"]
-    )
+    untarget_clean_acc = 1 -  untarget_clean["total_results"]["rule_mcq_eval:accuracy_score"]
+    untarget_attack_acc = 1 - untarget_attack["total_results"]["rule_mcq_eval:accuracy_score"]
 
-    target_robustness = (
-        1.0 - target_asr
-    )
+    if target_clean_acc > 0:
+        target_asr = (
+            target_clean_acc - target_attack_acc
+        ) / target_clean_acc
+    else:
+        target_asr = 0.0
 
-    # =========================
-    # Untarget Attack Robustness
-    # =========================
+    if untarget_clean_acc > 0:
+        untarget_asr = (
+            untarget_clean_acc - untarget_attack_acc
+        ) / untarget_clean_acc
+    else:
+        untarget_asr = 0.0
 
-    untarget_asr = (
-        untarget_attack["total_results"]
-        ["chat_untarget_accuracy:asr"]
-    )
+    target_robustness = 1.0 - target_asr
+    untarget_robustness = 1.0 - untarget_asr
 
-    untarget_robustness = (
-        1.0 - untarget_asr
-    )
-
-    # =========================
-    # Perturbation Robustness
-    # =========================
-
-    perturb_asr = (
-        perturb["total_results"]
-        ["rule_mcq_eval:accuracy_score"]
-    )
-
-    perturb_robustness = (
-        1.0 - perturb_asr
-    )
+    adv_robustness = (
+        target_robustness + untarget_robustness
+    ) / 2.0
 
     # =========================
-    # Overall Robustness
+    # 3. Perturbation Robustness
     # =========================
+    perturb_asr = perturb["total_results"]["rule_mcq_eval:accuracy_score"]
+    perturb_robustness = perturb_asr
 
+    # =========================
+    # Overall Score
+    # =========================
     overall = (
-        ood_generalization
-        + target_robustness
-        + untarget_robustness
+        generalization
+        + adv_robustness
         + perturb_robustness
-    ) / 4.0
+    ) / 3.0
 
     score = overall * 100
 
     return {
         "model_id": model_id,
 
-        # OOD
-        "ood_generalization": ood_generalization,
+        # 1. Generalization
+        "generalization": generalization,
 
-        # Target Attack
+        # 2. Adversarial Robustness
+        "target_clean_acc": target_clean_acc,
+        "target_attack_acc": target_attack_acc,
         "target_asr": target_asr,
         "target_robustness": target_robustness,
 
-        # Untarget Attack
+        "untarget_clean_acc": untarget_clean_acc,
+        "untarget_attack_acc": untarget_attack_acc,
         "untarget_asr": untarget_asr,
         "untarget_robustness": untarget_robustness,
 
-        # Perturbation
+        "adv_robustness": adv_robustness,
+
+        # 3. Perturbation Robustness
         "perturb_asr": perturb_asr,
         "perturb_robustness": perturb_robustness,
 
-        # Overall
+        # Final
         "overall": overall,
         "score": score,
     }
 
 
+# =========================
+# CLI Entry
+# =========================
 if __name__ == "__main__":
 
     if len(sys.argv) < 2:
@@ -171,22 +178,30 @@ if __name__ == "__main__":
 
     print(f"Model                  : {result['model_id']}")
 
-    print(f"OOD Generalization     : {result['ood_generalization']:.4f}")
+    # 1. Generalization
+    print(f"\n[1] Generalization")
+    print(f"  OOD Accuracy         : {result['generalization']:.4f}")
 
-    print(
-        f"Target Robustness      : {result['target_robustness']:.4f}"
-        f" (ASR={result['target_asr']:.4f})"
-    )
+    # 2. Adversarial Robustness
+    print(f"\n[2] Adversarial Robustness")
+    print(f"  Target Clean Acc     : {result['target_clean_acc']:.4f}")
+    print(f"  Target Attack Acc    : {result['target_attack_acc']:.4f}")
+    print(f"  Target ASR           : {result['target_asr']:.4f}")
+    print(f"  Target Robustness    : {result['target_robustness']:.4f}")
 
-    print(
-        f"Untarget Robustness    : {result['untarget_robustness']:.4f}"
-        f" (ASR={result['untarget_asr']:.4f})"
-    )
+    print(f"  Untarget Clean Acc   : {result['untarget_clean_acc']:.4f}")
+    print(f"  Untarget Attack Acc  : {result['untarget_attack_acc']:.4f}")
+    print(f"  Untarget ASR         : {result['untarget_asr']:.4f}")
+    print(f"  Untarget Robustness  : {result['untarget_robustness']:.4f}")
 
-    print(
-        f"Perturb Robustness     : {result['perturb_robustness']:.4f}"
-    )
+    print(f"  Avg Adv Robustness   : {result['adv_robustness']:.4f}")
 
-    print(f"Overall Robustness     : {result['overall']:.4f}")
+    # 3. Perturbation Robustness
+    print(f"\n[3] Perturbation Robustness")
+    print(f"  Accuracy             : {result['perturb_asr']:.4f}")
+    print(f"  Robustness           : {result['perturb_robustness']:.4f}")
 
-    print(f"Final Score            : {result['score']:.2f}/100")
+    # Final
+    print(f"\n[Overall]")
+    print(f"Overall Score         : {result['overall']:.4f}")
+    print(f"Final Score           : {result['score']:.2f}/100")

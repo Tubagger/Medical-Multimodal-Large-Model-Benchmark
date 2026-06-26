@@ -1,4 +1,4 @@
-annotation_file: './data/privacy/privacy_inflow/privacyinflow_vqa.json'
+annotation_file: './data/privacy/privacy_inflow/privacyinflow_vqa_tiny.json'
 image_dir: './data/privacy/privacy_inflow/images'
 nums: 200
 #200

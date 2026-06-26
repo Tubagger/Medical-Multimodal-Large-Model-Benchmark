@@ -15,7 +15,8 @@ with open(apikey_file, 'r') as f:
 os.environ.update(apikeys)
 if apikeys:
     print("apikeys loaded: \n{}".format(pformat(apikeys, indent=2)))
-
+else:
+    print("please input apikeys")
 
 @dataclass
 class TxtSample:

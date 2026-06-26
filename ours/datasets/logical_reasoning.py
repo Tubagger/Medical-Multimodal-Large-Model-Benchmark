@@ -16,11 +16,7 @@ import warnings
 class MedReasonData(BaseDataset):
 
     dataset_ids: Sequence[str] = [
-        "logical-reasoning-text",
         "logical-reasoning",
-        "logical-reasoning-color",
-        "logical-reasoning-nature",
-        "logical-reasoning-noise"
     ]
     dataset_config: Optional[str] = "./ours/configs/datasets/logical-reasoning.yaml"
     
@@ -123,82 +119,16 @@ class MedReasonData(BaseDataset):
             # extract answer
             # =========================
 
-            answer_text = sample.get("answer", "")
+            answer = sample.get("answer", "")
 
-            answer = None
-
-            option_lines = options.split("\n")
-
-            for line in option_lines:
-
-                line = line.strip()
-
-                match = re.match(
-                    r"([A-Z])\.\s*(.*)",
-                    line
+            dataset.append(
+                ImageTxtSample(
+                    id=id,
+                    image_path=image_path,
+                    text=prompt,
+                    target=answer,
                 )
-
-                if match:
-
-                    option_letter = match.group(1)
-
-                    option_content = match.group(2)
-
-                    # answer中包含该选项内容
-                    if option_content.lower() in answer_text.lower():
-
-                        answer = option_letter
-
-                        break
-
-            # =========================
-            # text only
-            # =========================
-
-            if dataset_id == "logical-reasoning-text":
-
-                dataset.append(
-                    TxtSample(
-                        id=id,
-                        text=prompt,
-                        target=answer,
-                    )
-                )
-
-            # =========================
-            # image + text
-            # =========================
-
-            elif dataset_id == "logical-reasoning":
-
-                dataset.append(
-                    ImageTxtSample(
-                        id=id,
-                        image_path=image_path,
-                        text=prompt,
-                        target=answer,
-                    )
-                )
-
-            # =========================
-            # unrelated image attack
-            # =========================
-
-            else:
-
-                unrelated_sample: ImageTxtSample = random.sample(
-                    UnrelatedImageDataset.dataset,
-                    k=1
-                )[0]
-
-                dataset.append(
-                    ImageTxtSample(
-                        id=id,
-                        image_path=unrelated_sample.image_path,
-                        text=prompt,
-                        target=answer,
-                    )
-                )
+            )
 
         self.dataset = dataset
 

@@ -1,0 +1,28 @@
+dataset_id: "anomaly-detection-chexpert"
+model_id: "lingshu-32b"
+log_file: "./logs/truthfulness/t1-basic/anomaly-detection-chexpert.json"
+
+generation_kwargs: {
+    'max_new_tokens': 180,
+    'do_sample': False,
+}
+
+evaluator_seq_cfgs: 
+  - rule_anomaly_detection_eval: 
+      metrics_cfg:
+        multiclass_metrics: {}
+      
+      keyword_map:
+        actinic keratosis: [actinic keratosis, ak, solar keratosis, sun damage lesion]
+        basal cell carcinoma: [basal cell carcinoma, bcc, rodent ulcer]
+        dermatofibroma: [dermatofibroma, benign fibrous histiocytoma]
+        melanoma: [melanoma, malignant melanoma, cutaneous melanoma]
+        nevus: [nevus, mole, melanocytic nevus, common nevus]
+        pigmented benign keratosis: [pigmented benign keratosis, seborrheic keratosis pigmented, benign keratosis]
+        seborrheic keratosis: [seborrheic keratosis, SK, verrucous keratosis]
+        squamous cell carcinoma: [squamous cell carcinoma, SCC, cutaneous SCC]
+        vascular lesion: [vascular lesion, hemangioma, angioma, cherry angioma]
+
+
+
+

@@ -2,6 +2,8 @@ from abc import abstractmethod, ABC
 import json
 import os
 from typing import Dict, Any, Sequence, List, Tuple, Union, Optional
+
+import numpy as np
 from ours.evaluators.metrics import _supported_metrics
 from ours.utils.registry import registry
 
@@ -78,11 +80,22 @@ class BaseEvaluator(ABC):
             cached_preds = summary["processed_preds"]
             cached_labels = summary["processed_labels"]
 
-        
-
+    
         new_preds, new_labels, processed_extras, evals = self.process(preds, labels, extras)
-        processed_preds = cached_preds + new_preds
-        processed_labels = cached_labels + new_labels
+
+        if cached_preds is not None and len(cached_preds) > 0:
+            processed_preds = np.concatenate([cached_preds, new_preds], axis=0)
+        else:
+            processed_preds = new_preds
+
+        if cached_labels is not None and len(cached_labels) > 0:
+            processed_labels = np.concatenate([cached_labels, new_labels], axis=0)
+        else:
+            processed_labels = new_labels
+        
+        processed_preds = np.asarray(processed_preds).tolist()
+        processed_labels = np.asarray(processed_labels).tolist()
+
 
         results = {}
         if processed_preds is not None:

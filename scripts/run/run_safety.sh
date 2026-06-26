@@ -8,10 +8,17 @@ fi
 model_id=$1
 
 dataset_ids=(
-    # "safety-risk-text"
-    "safety-risk"
-    "bap-jailbreak"
+    # "safety-risk"
+
+    # "bap-jailbreak"
     "mcn-jailbreak"
+
+    # "safety-vqa-clean"
+    # "safety-vqa-risk-minimization"
+    # "safety-vqa-authority"
+    # "safety-vqa-urgency"
+    # "safety-vqa-consequence-obfuscation"
+    # "safety-vqa-diagnostic-anchoring"
 )
 
 for dataset_id in "${dataset_ids[@]}"; do
@@ -20,46 +27,62 @@ for dataset_id in "${dataset_ids[@]}"; do
     echo "Running $dataset_id ..."
     echo "======================================"
 
-    # =========================
-    # determine stage
-    # =========================
-    if [[ "$dataset_id" == *"jailbreak"* ]]; then
+    # ====================================
+    # Stage 1: Safety Risk
+    # ====================================
+    if [[ "$dataset_id" == "safety-risk" ]]; then
 
-        stage="s2-jailbreak"
+        config="ours/configs/task/safety/s1-${dataset_id}.yaml"
+        log_dir="logs/safety/s1-safetyrisk"
 
-    elif [[ "$dataset_id" == *"risk"* ]]; then
+        python run_task.py \
+            --config "${config}" \
+            --cfg-options \
+                dataset_id="${dataset_id}" \
+                model_id="${model_id}" \
+                log_file="${log_dir}/${model_id}/${dataset_id}.json"
 
-        stage="s1-safetyrisk"
+    # ====================================
+    # Stage 2: Jailbreak
+    # ====================================
+    elif [[ "$dataset_id" == "bap-jailbreak" \
+         || "$dataset_id" == "mcn-jailbreak" ]]; then
 
+        config="ours/configs/task/safety/s2-${dataset_id}.yaml"
+        log_dir="logs/safety/s2-jailbreak"
+
+        python run_task.py \
+            --config "${config}" \
+            --cfg-options \
+                dataset_id="${dataset_id}" \
+                model_id="${model_id}" \
+                log_file="${log_dir}/${model_id}/${dataset_id}.json"
+
+    # ====================================
+    # Stage 3: Safety VQA
+    # ====================================
+    elif [[ "$dataset_id" == "safety-vqa" ]]; then
+        python ours/utils/safety_utils.py \
+            --json_files \
+            "logs/safety/p3-safety-vqa/${model_id}/safety-vqa-risk-minimization.json" \
+            "logs/safety/p3-safety-vqa/${model_id}/safety-vqa-authority.json" \
+            "logs/safety/p3-safety-vqa/${model_id}/safety-vqa-urgency.json" \
+            "logs/safety/p3-safety-vqa/${model_id}/safety-vqa-consequence-obfuscation.json" \
+            "logs/safety/p3-safety-vqa/${model_id}/safety-vqa-diagnostic-anchoring.json" \
+            --output_file \
+            "logs/safety/p3-safety-vqa/${model_id}/safety-vqa.json"
     else
 
-        stage="s3-toxicity"
+        config="ours/configs/task/safety/s3-${dataset_id}.yaml"
+        log_dir="logs/safety/s3-safety-vqa"
+
+        python run_task.py \
+            --config "${config}" \
+            --cfg-options \
+                dataset_id="${dataset_id}" \
+                model_id="${model_id}" \
+                log_file="${log_dir}/${model_id}/${dataset_id}.json"
 
     fi
-
-    # =========================
-    # config path
-    # =========================
-    config="ours/configs/task/safety/${stage%%-*}-${dataset_id}.yaml"
-
-    # =========================
-    # log path
-    # =========================
-    log_file="logs/safety/${stage}/${model_id}/${dataset_id}.json"
-
-    # =========================
-    # mkdir
-    # =========================
-    mkdir -p "$(dirname "$log_file")"
-
-    echo "Config: $config"
-    echo "Log: $log_file"
-
-    python run_task.py \
-        --config "${config}" \
-        --cfg-options \
-            dataset_id="${dataset_id}" \
-            model_id="${model_id}" \
-            log_file="${log_file}"
 
 done

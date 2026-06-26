@@ -39,9 +39,11 @@ class PrivacyInference(BaseDataset):
         self.nums = self.config.get('nums')
         assert os.path.exists(self.image_dir), f"❌ Image directory not found: {self.image_dir}"
         assert os.path.exists(self.label_dir), f"❌ Label file not found: {self.label_dir}"
-        with open(self.label_dir, 'r', encoding='utf-8') as f:
-            samples = json.load(f)
+        samples = []
 
+        with open(self.label_dir, "r", encoding="utf-8") as f:
+            for line in f:
+                samples.append(json.loads(line))
         # =========================
         # Intercept sample
         # =========================

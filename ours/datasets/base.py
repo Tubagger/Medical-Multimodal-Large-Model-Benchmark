@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
 from typing import Optional, Any, Sequence, List
-from torch.utils.data import Dataset
 from ours.methods.base import BaseMethod
+from torch.utils.data import Dataset
 from ours import _OutputType, ImageTxtSample, TxtSample
 
 def collate_fn(batch_data: List[_OutputType]):

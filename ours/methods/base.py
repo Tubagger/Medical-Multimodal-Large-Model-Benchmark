@@ -10,19 +10,21 @@ class BaseMethod(ABC):
     method_id: str # Identifier for the method
     method_ids: List[str] # List of available methods
     
-    def __init__(self, method_id: str, img_dir: str, lazy_mode: bool = True) -> None:
+    def __init__(self,model_id: str, method_id: str, ref_cache_dir: str, lazy_mode: bool = True) -> None:
         """
         Initializing method instance.
         
         Arguments:
             method_id: Identifier for the method
-            img_dir: Folder to save images
+            cache_dir: Folder to save cache
             lazy_mode: If True, it will reuse the already generated dataset. If False, it will regenerate the result
             
         """
         assert method_id in self.method_ids, f"Method {self.method_id} is not available. Only methods in {self.method_ids} can be used."
+        self.model_id = model_id
+    
         self.method_id = method_id
-        self.img_dir = img_dir
+        self.ref_cache_dir = ref_cache_dir
         self.lazy_mode = lazy_mode
 
     @abstractmethod

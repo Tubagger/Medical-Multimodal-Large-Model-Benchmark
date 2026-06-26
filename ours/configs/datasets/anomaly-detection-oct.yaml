@@ -1,0 +1,9 @@
+annotation_file: './data/truthfulness/anomaly_detection/OCT/labels.json'
+image_dir: './data/truthfulness/anomaly_detection/OCT/images'
+nums: 40
+#40
+keyword_map:
+  NORMAL: [normal retina, healthy retina, no disease]
+  CNV: [choroidal neovascularization, CNV, wet AMD, neovascular AMD]
+  DME: [diabetic macular edema, DME, retinal edema, macula swelling]
+  DRUSEN: [drusen, dry AMD, age-related macular degeneration deposits]

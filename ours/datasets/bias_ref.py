@@ -8,7 +8,6 @@ import yaml
 import json
 import os
 import warnings
-from torch.utils.data import DataLoader
 
 
 @registry.register_dataset()
@@ -25,7 +24,7 @@ class BiasRefData(BaseDataset):
             config = yaml.safe_load(f)
 
         self.nums = config.get("nums", None)
-        dataset_path = config.get("query_file", None)
+        self.label_dir = config.get("query_file", None)
 
         with open(self.label_dir, 'r', encoding='utf-8') as f:
             samples = json.load(f)
@@ -62,11 +61,11 @@ class BiasRefData(BaseDataset):
 
         for sample in samples:
 
-            id = sample['id']
+            id = sample['case_id']
             if id in processed_ids:
                 continue
             
-            sample_text = self.build_input_text(item)
+            sample_text = self.build_input_text(sample)
             dataset.append(
                 TxtSample(
                     id=id,
@@ -88,8 +87,7 @@ class BiasRefData(BaseDataset):
             f"Vital Sign: {vital_sign}\n\n"
             f"**Patient self-report:**\n{patient_self_report}\n\n"
             f"**Question:**\n{question}"
-            "**Instruction:** Only output the final answer option (e.g., A, B, C, or D). "
-            "Do not provide explanations."
+            "**Instruction:** Respond ONLY with the option letter(s). Do not output explanation."
         )
 
         # 替换占位符

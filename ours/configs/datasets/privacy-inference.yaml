@@ -1,4 +1,4 @@
-annotation_file: './data/privacy/privacy_inference/privacy_inference_vqa.json'
+annotation_file: './data/privacy/privacy_inference/privacy_inference_vqa_tiny.jsonl'
 image_dir: './data/privacy/privacy_inference/images'
-nums: 200
-#200
+nums: 180
+#180

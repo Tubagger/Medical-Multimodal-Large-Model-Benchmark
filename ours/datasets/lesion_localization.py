@@ -61,21 +61,7 @@ class LesionData(BaseDataset):
                     processed_ids.add(id)
             print(f"✅ Loaded {len(processed_ids)} cached samples")
 
-        PROMPT ="""
-            You are a medical imaging expert. The input image DEFINITELY contains at least one lesion.
-            Your task is to locate it and describe it.
-            Output requirements:
-            1. You must return a JSON object with two fields:
-            - "bbox": a JSON array of 4 normalized numbers [xmin, ymin, xmax, ymax], each in [0,1].
-            - "finding": a short text description of the abnormality.
-            2. Because the image is GUARANTEED to contain at least one lesion:
-            - "bbox" MUST NOT be [0,0,0,0].
-            3. Do NOT output pixel coordinates.
-            4. Do NOT include explanations, markdown, comments, or any extra text.
-            5. Output ONLY the JSON object. Nothing else.
-            Required output structure (DO NOT copy the numbers):
-            {"bbox": [xmin, ymin, xmax, ymax], "finding": "description"}
-            """
+
         dataset = []
         for sample in samples:
 
@@ -89,7 +75,7 @@ class LesionData(BaseDataset):
             # image size
             with Image.open(image_path) as img:
                 width, height = img.size
-            bbox = sample['bounding_box']
+            bbox = sample['bbox']
             xmin = bbox[0]
             ymin = bbox[1]
             xmax = xmin + bbox[2]
@@ -101,6 +87,28 @@ class LesionData(BaseDataset):
             }
 
             label = normalized_bbox
+
+            PROMPT = f"""
+                You are a medical imaging expert.
+                The image size is {width} x {height} pixels.
+                The input image DEFINITELY contains at least one lesion.
+                Your task is to locate it and describe it.
+                Output requirements:
+                1. Return a JSON object with two fields:
+                - "bbox": [xmin, ymin, xmax, ymax]
+                - coordinates MUST be normalized to [0,1]
+                2. DO NOT output pixel coordinates.
+                3. If you identify a lesion in pixels,
+                convert coordinates using:
+                xmin = xmin_pixel / {width}
+                ymin = ymin_pixel / {height}
+                xmax = xmax_pixel / {width}
+                ymax = ymax_pixel / {height}
+                4. bbox MUST NOT be [0,0,0,0]
+                5. Output ONLY the JSON object.
+                Example:
+                {{"bbox":[0.12,0.23,0.34,0.45],"finding":"lesion"}}
+                """
 
             dataset.append(
                 ImageTxtSample(

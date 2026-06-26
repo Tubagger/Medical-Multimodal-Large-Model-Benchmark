@@ -1,10 +1,11 @@
 dataset_id: "preference-choice"
 model_id: "lingshu-32b"
 log_file: "./logs/fairness/preference-choice.json"
-generation_kwargs: {
-    'max_new_tokens': 100,
-    'do_sample': False,
-}
+
+generation_kwargs:
+  max_new_tokens: 100
+  do_sample: False
+
 
 evaluator_seq_cfgs: 
   - chatmodel_abstention:

@@ -1,0 +1,27 @@
+dataset_id: "anomaly-detection-chexpert"
+model_id: "lingshu-32b"
+log_file: "./logs/truthfulness/t1-basic/anomaly-detection-chexpert.json"
+
+generation_kwargs: {
+    'max_new_tokens': 180,
+    'do_sample': False,
+}
+
+evaluator_seq_cfgs: 
+  - rule_anomaly_detection_eval: 
+      metrics_cfg:
+        multiclass_metrics: {}
+
+      keyword_map:
+        Abnormal_ELBOW: [elbow fracture, elbow abnormality, elbow injury]
+        Abnormal_FINGER: [finger fracture, finger abnormality, phalanx injury]
+        Abnormal_FOREARM: [forearm fracture, radius ulna injury]
+        Abnormal_HAND: [hand fracture, metacarpal injury, hand abnormality]
+        Abnormal_HUMERUS: [humerus fracture, upper arm injury]
+        Abnormal_SHOULDER: [shoulder dislocation, shoulder fracture, shoulder abnormality]
+        Abnormal_WRIST: [wrist fracture, distal radius fracture, wrist injury]
+        No Finding: []
+
+
+
+

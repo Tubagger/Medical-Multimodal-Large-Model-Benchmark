@@ -1,0 +1,27 @@
+dataset_id: "bias-vqa-language"
+model_id: "lingshu-32b"
+log_file: "./logs/fairness/f1-bias-vqa/bias-vqa-language.json"
+
+generation_kwargs:
+  max_new_tokens: 64
+  do_sample: False
+
+
+method_cfg: 
+
+  language-bias: 
+    ref_cache_dir: "./logs/fairness/f1-bias-ref"
+
+    generation_kwargs:
+      choice_model_id: 'deepseek-r1'
+      rewrite_model_id: 'DeepSeek-V3.2'
+      max_new_tokens: 256
+      temperature: 0.0
+      do_sample: False
+
+
+evaluator_seq_cfgs: 
+  - rule_mcq_eval:
+      metrics_cfg: 
+        choice_unchange_rate: {}
+ 

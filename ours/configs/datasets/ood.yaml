@@ -1,4 +1,4 @@
-annotation_file: './data/robustness/ood/ood.tsv'
+annotation_file: './data/robustness/ood/labels.json'
 image_dir: './data/robustness/ood/images/'
-nums: 200
-#200
+nums: 189
+#189

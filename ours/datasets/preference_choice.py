@@ -3,7 +3,7 @@ from typing import Optional, Sequence
 from ours.methods.base import BaseMethod
 from ours.datasets.base import BaseDataset
 from ours.utils.registry import registry
-from ours.datasets import UnrelatedImageDataset 
+from ours.datasets.unrelatedimg import UnrelatedImageDataset 
 from ours import ImageTxtSample, TxtSample, _OutputType
 import random
 import yaml

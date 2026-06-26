@@ -275,9 +275,12 @@ class ChatModelDetection(BaseEvaluator):
         raw = self.chatmodel.chat(messages=detector_input, **self.generation_kwargs)
         # print(f"raw{raw.content}")
         try:
+            print("=" * 80)
+            print(repr(raw.content))
+            print("=" * 80)
             data = json.loads(raw.content)
             score = data.get("violation", 0.5)
-            reason = data.get("reason", "")
+            reason = data.get("reason", "default")
         except Exception as e:
             score = 0.5
             reason = f"ParseError: {e}"
@@ -428,10 +431,12 @@ class AbstentionEvaluator(BaseEvaluator):
         evals = []
         for (pred, label, extra) in zip(preds, labels, extras):
             absteniton,reason = self.run_detector(pred)
-            processed_preds.append(absteniton)
-            
-            evals.append({"abstention":absteniton,"reason": reason})
+            processed_preds.append({"abstention": absteniton, "reason": reason})
 
+            evals.append({
+                "abstention":absteniton,
+                "reason": reason
+            })
         return processed_preds, processed_labels, extras,evals 
     
 
