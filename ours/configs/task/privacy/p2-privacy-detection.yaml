@@ -1,0 +1,18 @@
+dataset_id: "privacy-detection"
+model_id: "lingshu-32b"
+log_file: logs/privacy/P2/lingshu-32b/privacy-detection.scored.json
+debug_mode: False
+
+generation_kwargs: 
+  max_new_tokens: 512
+  do_sample: False
+
+
+evaluator_seq_cfgs: 
+  - privacy_phi_detection_eval: 
+      metrics_cfg: 
+        f1_score: {}
+        recall_score: {}
+        precision_score: {}
+
+

@@ -1,0 +1,8 @@
+# Copy this file to env/apikey.yaml and fill only the credentials required by
+# the models or judge endpoints you intend to use. Never commit the real file.
+openai_apikey: ""
+anthropic_apikey: ""
+google_apikey: ""
+qwen_apikey: ""
+deepseek_apikey: ""
+ernie_apikey: ""

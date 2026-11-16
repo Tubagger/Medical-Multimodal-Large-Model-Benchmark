@@ -1,0 +1,1 @@
+10个本地模型环境和1个API环境dmxapi的依赖快照。explicit清单记录Conda构建版本，yaml另含Pip依赖。直接使用已有环境或原项目deployment/envs中的已验证环境压缩包。导出清单不保证在其他CUDA、操作系统和GPU上无需调整。

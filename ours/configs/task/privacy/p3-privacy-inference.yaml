@@ -1,0 +1,9 @@
+dataset_id: privacy-inference
+model_id: lingshu-7b
+log_file: logs/privacy/P3/lingshu-7b/privacy-inference.scored.json
+debug_mode: false
+generation_kwargs:
+  max_new_tokens: 300
+  do_sample: false
+# This stage collects answers only. No judge API or scoring is used.
+evaluator_seq_cfgs: []

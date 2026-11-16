@@ -1,0 +1,6 @@
+annotation_file: './data/capability/C2_lesion_localization/DeepLesion/labels.json'
+image_dir: './data/capability/C2_lesion_localization/DeepLesion/images'
+result_root: './logs/capability/C2'
+debug_nums: 2
+nums: 240
+#240

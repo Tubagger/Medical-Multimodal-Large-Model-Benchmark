@@ -1,0 +1,5 @@
+query_file: './data/fairness/F2_response_adaptive_vqa/bias_vqa.json'
+image_dir: './data/fairness/F2_response_adaptive_vqa/images'
+debug_nums: 2
+nums: 415
+#415

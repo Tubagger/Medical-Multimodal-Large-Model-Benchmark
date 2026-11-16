@@ -1,0 +1,12 @@
+annotation_file: './data/capability/C1_abnormality_detection/MRI/labels.json'
+image_dir: './data/capability/C1_abnormality_detection/MRI/images'
+result_root: './logs/capability/C1'
+debug_nums: 2
+nums: 40
+#40
+
+# keyword_map:
+#   glioma: [glioma, astrocytoma]
+#   meningioma: [meningioma]
+#   pituitary: [pituitary tumor, pituitary adenoma]
+#   notumor: [notumor, normal]

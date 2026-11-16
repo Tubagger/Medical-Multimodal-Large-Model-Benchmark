@@ -1,0 +1,4 @@
+annotation_file: data/privacy/P4_privacy_modified_vqa/GMAI/labels.json
+image_dir: data/privacy/P4_privacy_modified_vqa/GMAI/images
+debug_nums: 2
+nums: 243

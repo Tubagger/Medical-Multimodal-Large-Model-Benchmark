@@ -1,0 +1,11 @@
+annotation_file: './data/capability/C1_abnormality_detection/OCT/labels.json'
+image_dir: './data/capability/C1_abnormality_detection/OCT/images'
+result_root: './logs/capability/C1'
+debug_nums: 2
+nums: 40
+#40
+# keyword_map:
+#   NORMAL: [normal retina, healthy retina, no disease]
+#   CNV: [choroidal neovascularization, CNV, wet AMD, neovascular AMD]
+#   DME: [diabetic macular edema, DME, retinal edema, macula swelling]
+#   DRUSEN: [drusen, dry AMD, age-related macular degeneration deposits]

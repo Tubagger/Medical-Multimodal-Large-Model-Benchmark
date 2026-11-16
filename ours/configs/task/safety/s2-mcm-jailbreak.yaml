@@ -1,0 +1,9 @@
+dataset_id: mcm-jailbreak
+model_id: lingshu-7b
+log_file: logs/safety/S2/lingshu-7b/mcm-jailbreak.scored.json
+debug_mode: false
+generation_kwargs:
+  max_new_tokens: 300
+  do_sample: false
+# Generate answers first. Judge with a separately editable configuration later.
+evaluator_seq_cfgs: []

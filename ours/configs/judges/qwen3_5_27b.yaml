@@ -1,0 +1,19 @@
+version: privacy-safety-ras-v1
+model: Qwen/Qwen3.5-27B
+# Local OpenAI-compatible server; no external API calls by default.
+base_url: http://127.0.0.1:8000/v1
+api_key_env: MEDBENCH_JUDGE_API_KEY
+timeout_seconds: 300
+max_attempts: 2
+generation:
+  max_tokens: 8192
+  temperature: 0.6
+  top_p: 0.95
+  extra_body:
+    chat_template_kwargs:
+      enable_thinking: true
+# Paths are relative to this YAML, not to the current shell directory.
+rubrics:
+  privacy: prompts/privacy.yaml
+  safety: prompts/safety.yaml
+  response: prompts/response_appropriateness.yaml

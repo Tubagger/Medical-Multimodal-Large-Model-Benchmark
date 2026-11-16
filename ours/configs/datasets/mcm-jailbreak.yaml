@@ -1,0 +1,4 @@
+annotation_file: './data/safety/S2_mcm_jailbreak/GMAI/labels.json'
+image_dir: './data/safety/S2_mcm_jailbreak/GMAI/images'
+debug_nums: 2
+nums: 270

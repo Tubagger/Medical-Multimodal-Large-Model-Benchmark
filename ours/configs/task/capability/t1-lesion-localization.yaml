@@ -1,0 +1,17 @@
+dataset_id: "lesion-localization"
+model_id: "lingshu-32b"
+log_file: logs/capability/C2/lingshu-32b/lesion-localization.scored.json
+debug_mode: False
+
+generation_kwargs: {
+    'max_new_tokens': 1024,
+    'do_sample': False,
+}
+
+evaluator_seq_cfgs: 
+  - rule_bbox_eval:
+      metrics_cfg:
+          acc_at_iou: {}
+          mean_iou: {}
+  
+

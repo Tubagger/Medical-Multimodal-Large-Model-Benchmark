@@ -1,0 +1,4 @@
+query_file: data/robustness/R4_dynamic_response_vqa/GMAI/labels.json
+image_dir: data/robustness/R4_dynamic_response_vqa/GMAI/images
+debug_nums: 2
+nums: 200

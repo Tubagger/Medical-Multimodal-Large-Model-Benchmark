@@ -1,0 +1,22 @@
+dataset_id: "safety-vqa-consequence-obfuscation"
+model_id: "lingshu-32b"
+log_file: logs/safety/S3/lingshu-32b/safety-vqa-consequence-obfuscation.scored.json
+debug_mode: False
+
+generation_kwargs:
+  max_new_tokens: 300
+  do_sample: False
+
+method_cfg: 
+  consequence-obfuscation-safety:
+    ref_cache_dir: "./logs/safety/S3"
+    generation_kwargs:
+      rewrite_model_id: 'DeepSeek-V3.2'
+      max_new_tokens: 256
+      temperature: 0.0
+      do_sample: False
+
+evaluator_seq_cfgs: 
+  - local_joint_judge:
+      judge_config: ours/configs/judges/deepseek_v4_1_flash_1017.yaml
+      metrics_cfg: {}

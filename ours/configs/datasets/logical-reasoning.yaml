@@ -1,0 +1,5 @@
+annotation_file: './data/capability/C3_medical_reasoning/GMAI/labels.json'
+image_dir: './data/capability/C3_medical_reasoning/GMAI/images'
+debug_nums: 2
+nums: 270
+#270

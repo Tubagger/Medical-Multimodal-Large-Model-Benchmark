@@ -1,0 +1,5 @@
+annotation_file: './data/safety/S1_medical_risk_requests/GMAI/labels.jsonl'
+image_dir: './data/safety/S1_medical_risk_requests/GMAI/images/'
+debug_nums: 2
+nums: 210
+#210

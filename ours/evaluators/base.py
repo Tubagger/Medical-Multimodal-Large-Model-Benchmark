@@ -1,0 +1,202 @@
+from abc import abstractmethod, ABC
+import json
+import os
+from typing import Dict, Any, Sequence, List, Tuple, Union, Optional
+
+import numpy as np
+from ours.evaluators.metrics import _supported_metrics
+from ours.utils.registry import registry
+
+class BaseEvaluator(ABC):
+    """
+    Base class for evaluators, to evaluate the responses from chatmodels.
+    """
+
+    evaluator_ids: List[str] = []
+    requires_llm_judge: bool = False
+    def __init__(self, evaluator_id: str, metrics_cfg: Dict[str, Any]) -> None:
+        """
+        Initializing evaluator instance.
+        
+        Arguments:
+            evaluator_id: Identifier for the evaluator
+            metrics_cfg: config dict for metrics hooks, format: {metrics_id: metrics_kwargs, ...}
+            
+        """
+        assert evaluator_id in self.evaluator_ids, f"Evaluator {self.evaluator_id} is not available. Only Evaluators in {self.evaluator_ids} can be used."
+
+        self.evaluator_id = evaluator_id
+        
+        self.metrics_cfg = metrics_cfg
+        for metrics_id in self.metrics_cfg.keys():
+            assert metrics_id in _supported_metrics.keys(), f"{metrics_id} is not supported."
+
+    @abstractmethod
+    def process(self, preds: Sequence[Any], labels: Optional[Sequence[Any]] = None, extras: Optional[Sequence[Any]] = None, **kwargs) -> Tuple[Sequence[Any], Sequence[Any]]:
+        """
+        1. Perform some processing on sequence data, mainly including scoring/text-extraction with chatmodel/classifier/rule-based, etc.
+        2. Different evaluators can be concatenated, and the process function can be cascaded to perform multi-step processing on sequence data.
+        
+        Arguments:
+            preds: responses from chatmodels or preds from `process` function of another evaluator
+            labels: groundtruth labels or labels from `process` function of another evaluator
+            extras: extra parameters or extra sequence from `process` function of another evaluator
+            
+        Return:
+            preds: processed preds sequence
+            labels: processed labels sequence
+            extras: processed extra sequence
+        """
+
+        # no-op
+        return preds, labels, extras
+    
+    def eval(self, preds: Sequence[Any], labels: Optional[Sequence[Any]] = None, extras: Optional[Sequence[Any]] = None, log_file: str = None, **kwargs) -> Dict[str, Union[Sequence, float]]:
+        """
+        Evaluate pipeline including data processing and metrics calculation.
+        
+        Arguments:
+            preds: responses from chatmodels
+            labels: groundtruth labels
+            extras: extra parameters
+            
+        Return:
+            results
+        """
+
+        # =========================
+        # load cache
+        # =========================
+        cached_preds = []
+        cached_labels = []
+        if log_file is not None and os.path.exists(log_file):
+
+            summary_key = f"{self.evaluator_id}:processed_summary"
+
+            with open(log_file, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+
+            summary = cache["total_results"][summary_key]
+
+            cached_preds = summary["processed_preds"]
+            cached_labels = summary["processed_labels"]
+
+    
+        new_preds, new_labels, processed_extras, evals = self.process(preds, labels, extras)
+
+        if cached_preds is not None and len(cached_preds) > 0:
+            processed_preds = np.concatenate([cached_preds, new_preds], axis=0)
+        else:
+            processed_preds = new_preds
+
+        if cached_labels is not None and len(cached_labels) > 0:
+            processed_labels = np.concatenate([cached_labels, new_labels], axis=0)
+        else:
+            processed_labels = new_labels
+        
+        processed_preds = np.asarray(processed_preds).tolist()
+        processed_labels = np.asarray(processed_labels).tolist()
+
+
+        results = {}
+
+        for metrics_id, kwargs in self.metrics_cfg.items():
+            metrics_fn = _supported_metrics[metrics_id]
+            results[metrics_id] = metrics_fn(processed_labels, processed_preds, **kwargs)
+
+        #save  storage results
+        results["processed_summary"] = {
+            "processed_preds": processed_preds,
+            "processed_labels": processed_labels,
+        }
+        return results,evals,
+    
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        return self.eval(*args, **kwds)
+    
+
+class SequentialEvaluator:
+    """
+    Class for cascading evaluators to perform multi-step processing on sequence data and get results from final sequence data.
+    """
+
+    def __init__(self, evaluator_seq_cfg: Dict[str, Any], task_id: str = None) -> None:
+        """
+        Initializing sequence-evaluator instance.
+        
+        Arguments:
+            evaluator_seq_cfg: config dict for instantiatizing evaluators, format: {evaluator: evaluator_kwargs, ...}
+            
+        """
+
+        self.task_id = task_id
+        evaluator_seq, evaluator_cls_names = [], []
+        for evaluator_id, evaluator_kwargs in evaluator_seq_cfg.items():
+            evaluator_cls = registry.get_evaluator_class(evaluator_id)
+            evaluator_kwargs = dict(evaluator_kwargs)
+            if getattr(evaluator_cls, 'requires_task_id', False) and 'task_id' not in evaluator_kwargs:
+                task_id = getattr(self, 'task_id', None)
+                if task_id is None:
+                    raise ValueError(f'{evaluator_id} requires task_id in the task configuration')
+                evaluator_kwargs['task_id'] = task_id
+            evaluator = evaluator_cls(evaluator_id, **evaluator_kwargs)
+            evaluator_cls_names.append(evaluator_id)
+            evaluator_seq.append(evaluator)
+        self.evaluator_seq = evaluator_seq
+        self.requires_case_context = any(
+            getattr(evaluator, 'requires_case_context', False) for evaluator in evaluator_seq
+        )
+        self.keyname_prefix_seq = self.create_sequence_list(evaluator_cls_names)
+    
+    def create_sequence_list(self, input_list: List[str]) -> List[str]:
+        result = []
+        current = ""
+        for item in input_list:
+            if current:
+                current += f"->{item}"
+            else:
+                current = item
+            result.append(current)
+        return result
+
+    def eval(self, preds: Sequence[Any], labels: Optional[Sequence[Any]] = None, extras: Optional[Sequence[Any]] = None, log_file: str = None, **kwargs) -> Dict[str, Union[Sequence, float]]:
+        """
+        Evaluate pipeline including data processing and metrics calculation.
+        
+        Arguments:
+            preds: responses from chatmodels
+            labels: groundtruth labels
+            extras: extra parameters
+            
+        Return:
+            results
+        """
+
+        prefix_results = {}
+        seq_len = len(self.evaluator_seq)
+        for evaluator_idx, (evaluator, keyname_prefix) in enumerate(zip(self.evaluator_seq, self.keyname_prefix_seq)):
+            if evaluator_idx < seq_len - 1:
+                preds, labels, extras = evaluator.process(preds, labels, extras, **kwargs)
+            else:
+                # final evaluator
+                results, evals = evaluator(
+                    preds,
+                    labels,
+                    extras,
+                    log_file,
+                    **kwargs,
+                )
+
+                prefix_results.update(
+                    {
+                        f"{keyname_prefix}:{key}": value
+                        for key, value in results.items()
+                    }
+                )
+                # prefix_results.update({f"{keyname_prefix}:{key}": value for key, value in results.items()})
+
+        return prefix_results, evals
+    
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        return self.eval(*args, **kwds)
+    

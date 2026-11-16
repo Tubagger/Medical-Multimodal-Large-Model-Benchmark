@@ -1,0 +1,5 @@
+image_dir: './data/robustness/R2_untargeted_attack/GMAI/clean/images'
+annotation_file: './data/robustness/R2_untargeted_attack/GMAI/labels.json'
+debug_nums: 2
+nums: 200
+#200

@@ -1,0 +1,4 @@
+annotation_file: data/safety/S3_dynamic_safety_vqa/GMAI/labels.jsonl
+image_dir: data/safety/S3_dynamic_safety_vqa/GMAI/images
+debug_nums: 2
+nums: 210

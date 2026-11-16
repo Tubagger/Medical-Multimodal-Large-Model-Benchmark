@@ -1,0 +1,16 @@
+dataset_id: "logical-reasoning"
+model_id: "lingshu-32b"
+log_file: logs/capability/C3/lingshu-32b/logical-reasoning.scored.json
+debug_mode: False
+
+generation_kwargs: {
+    'max_new_tokens': 300,
+    'do_sample': False,
+}
+
+evaluator_seq_cfgs: 
+  - rule_mcq_eval: 
+      metrics_cfg:
+        accuracy_score: {}
+  
+   

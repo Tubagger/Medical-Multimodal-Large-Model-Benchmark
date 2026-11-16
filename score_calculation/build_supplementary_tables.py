@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+"""Render the five result tables for the supplementary material."""
+import json
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+RESULTS = ROOT / "score_calculation/results/dimension_scores_current.json"
+OUTPUT = ROOT / "IEEE_ACCESS_supplementary/tables/dimension_scores.tex"
+
+GROUPS = [
+    ("Medical", "Medical-Specialized Open-Source MLLMs", "medicalbar"),
+    ("General", "General-Purpose Open-Source MLLMs", "generalbar"),
+    ("Proprietary", "Proprietary MLLMs", "propbar"),
+]
+
+DIMENSIONS = [
+    (
+        "Capability",
+        "Capability",
+        ["C1", "C2", "C3"],
+        "C",
+        "C.1 averages accuracy over its five source datasets, C.2 combines "
+        "mIoU and Acc@IoU, and C.3 is multiple-choice accuracy.",
+    ),
+    (
+        "Robustness",
+        "Robustness",
+        ["R1", "R2", "R3", "R4"],
+        "R",
+        "R.1 is option accuracy on OOD medical VQA, R.2 and R.3 are paired "
+        "robust accuracy, and R.4 is branch accuracy over four frozen rewrites.",
+    ),
+    (
+        "Fairness",
+        "Fairness",
+        ["F1", "F2"],
+        "F",
+        "F.1 is neutrality under the equal-priority premise, and F.2 is the "
+        "unchanged-choice rate under response-conditioned rewrites.",
+    ),
+    (
+        "Privacy",
+        "Privacy",
+        ["P1", "P2", "P3", "P4"],
+        "P",
+        "P.1 combines recognition accuracy and macro-F1, P.2 is PHI-detection "
+        "F1, and P.3/P.4 combine privacy protection with response appropriateness.",
+    ),
+    (
+        "Safety",
+        "Safety",
+        ["S1", "S2", "S3"],
+        "S",
+        "S.1--S.3 combine non-compliance with response appropriateness.",
+    ),
+]
+
+
+def load_rows():
+    rows = json.loads(RESULTS.read_text(encoding="utf-8"))
+    if len(rows) != 17:
+        raise ValueError(f"Expected 17 models, found {len(rows)}")
+    if {row["group"] for row in rows} != {"Medical", "General", "Proprietary"}:
+        raise ValueError("Unexpected model group label")
+    return rows
+
+
+def ranks(rows, key):
+    ordered = sorted(rows, key=lambda row: row[key], reverse=True)
+    return {row["model"]: rank for rank, row in enumerate(ordered, 1)}
+
+
+def formatted(value, maximum):
+    text = f"{value:.2f}"
+    return rf"\textbf{{{text}}}" if abs(value - maximum) < 1e-9 else text
+
+
+def render_table(rows, dimension, key, tasks, prefix, note):
+    dimension_ranks = ranks(rows, key)
+    maxima = {task: max(row[task] for row in rows) for task in tasks}
+    maximum = max(row[key] for row in rows)
+
+    task_width = 0.43 / len(tasks)
+    model_width = 0.33
+    model_column = (
+        r">{\raggedright\arraybackslash}p{"
+        + f"{model_width:.4f}"
+        + r"\textwidth}"
+    )
+    task_column = (
+        r">{\centering\arraybackslash}p{"
+        + f"{task_width:.4f}"
+        + r"\textwidth}"
+    )
+    overall_column = (
+        r">{\centering\arraybackslash}p{0.1700\textwidth}"
+    )
+    columns = model_column + task_column * len(tasks) + overall_column
+
+    header = [
+        r"\textbf{Model}",
+        *[rf"\textbf{{{prefix}.{index}}}" for index in range(1, len(tasks) + 1)],
+        r"\textbf{Overall (Rank)}",
+    ]
+
+    lines = [
+        r"\begin{table}[!t]",
+        r"\centering",
+        (
+            rf"\caption{{{dimension} results. {note} The final column reports "
+            r"the dimension mean and its rank across the 17 models; higher is better.}"
+        ),
+        rf"\label{{tab:supp_{key.lower()}_scores}}",
+        r"\fontsize{8.2}{9.6}\selectfont",
+        r"\setlength{\tabcolsep}{2pt}",
+        r"\renewcommand{\arraystretch}{1.04}",
+        rf"\begin{{tabularx}}{{\textwidth}}{{@{{}}{columns}@{{}}}}",
+        r"\toprule",
+        " & ".join(header) + r" \\",
+        r"\midrule",
+    ]
+
+    for group_key, group_name, color in GROUPS:
+        group_rows = [row for row in rows if row["group"] == group_key]
+        lines.extend(
+            [
+                rf"\rowcolor{{{color}}}",
+                (
+                    rf"\multicolumn{{{len(tasks) + 2}}}{{@{{}}c@{{}}}}{{\textbf{{"
+                    + group_name
+                    + r"}} \\"
+                ),
+            ]
+        )
+        for row in group_rows:
+            cells = [row["model"]]
+            cells.extend(formatted(row[task], maxima[task]) for task in tasks)
+            score = formatted(row[key], maximum)
+            cells.append(f"{score} ({dimension_ranks[row['model']]})")
+            lines.append(" & ".join(cells) + r" \\")
+
+    lines.extend([r"\bottomrule", r"\end{tabularx}", r"\end{table}", ""])
+    return "\n".join(lines)
+
+
+def main():
+    rows = load_rows()
+    tables = [
+        render_table(rows, dimension, key, tasks, prefix, note)
+        for dimension, key, tasks, prefix, note in DIMENSIONS
+    ]
+    OUTPUT.write_text(
+        "% Generated by score_calculation/build_supplementary_tables.py\n\n"
+        + "\n".join(tables),
+        encoding="utf-8",
+    )
+    print(f"Wrote {OUTPUT}")
+
+
+if __name__ == "__main__":
+    main()

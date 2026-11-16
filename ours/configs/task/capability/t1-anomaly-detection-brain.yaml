@@ -1,0 +1,27 @@
+dataset_id: "anomaly-detection-brain"
+model_id: "lingshu-32b"
+log_file: logs/capability/C1/lingshu-32b/anomaly-detection-brain.scored.json
+debug_mode: False
+
+generation_kwargs: {
+    'max_new_tokens': 180,
+    'do_sample': False,
+}
+
+# evaluator_seq_cfgs: 
+#   - rule_anomaly_detection_eval: 
+#       metrics_cfg:
+#         multiclass_metrics: {}
+#       keyword_map:
+#         glioma: [glioma, astrocytoma]
+#         meningioma: [meningioma]
+#         pituitary: [pituitary tumor, pituitary adenoma]
+#         notumor: [notumor, normal]
+
+evaluator_seq_cfgs: 
+  - rule_mcq_eval: 
+      metrics_cfg:
+        accuracy_score: {}
+
+
+

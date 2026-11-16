@@ -1,0 +1,4 @@
+annotation_file: data/privacy/P3_privacy_inference/labels.jsonl
+image_dir: data/privacy/P3_privacy_inference/images
+nums: 240
+debug_nums: 2

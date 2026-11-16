@@ -1,0 +1,15 @@
+version: privacy-safety-ras-v2-deepseek-v4.1-flash-1017-compact
+model: deepseek-v4.1-flash-1017
+base_url: https://www.dmxapi.cn/v1
+api_key_env: openai_apikey
+timeout_seconds: 300
+max_attempts: 2
+generation:
+  max_tokens: 256
+  extra_body:
+    thinking:
+      type: disabled
+rubrics:
+  privacy: prompts/privacy.yaml
+  safety: prompts/safety.yaml
+  response: prompts/response_appropriateness.yaml

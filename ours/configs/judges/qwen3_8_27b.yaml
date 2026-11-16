@@ -1,0 +1,18 @@
+version: privacy-safety-ras-v2-qwen3.8-27b-fast
+model: Qwen/Qwen3.8-27B
+base_url: http://127.0.0.1:8000/v1
+api_key_env: MEDBENCH_JUDGE_API_KEY
+timeout_seconds: 300
+max_attempts: 2
+generation:
+  max_tokens: 1024
+  temperature: 0.0
+  top_p: 0.95
+  extra_body:
+    top_k: 20
+    chat_template_kwargs:
+      enable_thinking: false
+rubrics:
+  privacy: prompts/privacy.yaml
+  safety: prompts/safety.yaml
+  response: prompts/response_appropriateness.yaml

@@ -1,0 +1,159 @@
+{
+  "description": "16 local models on 2+4+4 RTX 5880 GPUs; keep every conda environment on one machine",
+  "scope": {
+    "experiment_version": "v2",
+    "tasks": [
+      "R.4",
+      "P.4",
+      "S.3"
+    ],
+    "shared_inputs_status": "frozen",
+    "scoring_default": "none"
+  },
+  "machines": [
+    {
+      "id": "local",
+      "gpu_count": 2,
+      "environment_action": "reuse_local",
+      "environments": [
+        "deepseek-vl2",
+        "healthgpt-pro",
+        "glm-4v",
+        "huatuogpt"
+      ],
+      "workers": [
+        {
+          "cuda_visible_devices": "0,1",
+          "models": [
+            {
+              "id": "huatuogpt-v-34b",
+              "env": "huatuogpt"
+            },
+            {
+              "id": "huatuogpt-v-7b",
+              "env": "huatuogpt"
+            },
+            {
+              "id": "deepseek-vl2",
+              "env": "deepseek-vl2"
+            },
+            {
+              "id": "deepseek-vl2-small",
+              "env": "deepseek-vl2"
+            },
+            {
+              "id": "glm-4v-9b",
+              "env": "glm-4v"
+            },
+            {
+              "id": "healthgpt-pro-8b",
+              "env": "healthgpt-pro"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "remote_a",
+      "gpu_count": 4,
+      "environment_action": "package_once_per_environment",
+      "environments": [
+        "med-gemma",
+        "qwen3-vl"
+      ],
+      "workers": [
+        {
+          "cuda_visible_devices": "0,1",
+          "models": [
+            {
+              "id": "qwen3-vl-32b-instruct",
+              "env": "qwen3-vl"
+            }
+          ]
+        },
+        {
+          "cuda_visible_devices": "2,3",
+          "models": [
+            {
+              "id": "med-gemma-4b-it",
+              "env": "med-gemma"
+            },
+            {
+              "id": "med-gemma-27b-it",
+              "env": "med-gemma"
+            }
+          ]
+        }
+      ],
+      "preparation_order": [
+        "med-gemma-4b-it",
+        "med-gemma-27b-it",
+        "qwen3-vl-32b-instruct"
+      ]
+    },
+    {
+      "id": "remote_b",
+      "gpu_count": 4,
+      "environment_action": "package_once_per_environment",
+      "environments": [
+        "lingshu",
+        "llava-med-1.5",
+        "internvl3.5",
+        "hulumed"
+      ],
+      "workers": [
+        {
+          "cuda_visible_devices": "0,1",
+          "models": [
+            {
+              "id": "internvl3.5-38b",
+              "env": "internvl3.5"
+            },
+            {
+              "id": "lingshu-32b",
+              "env": "lingshu"
+            }
+          ]
+        },
+        {
+          "cuda_visible_devices": "2,3",
+          "models": [
+            {
+              "id": "hulu-med-32b",
+              "env": "hulumed"
+            },
+            {
+              "id": "internvl3.5-14b",
+              "env": "internvl3.5"
+            },
+            {
+              "id": "llava-med-v1.5-mistral-7b",
+              "env": "llava-med-1.5"
+            },
+            {
+              "id": "hulu-med-7b",
+              "env": "hulumed"
+            },
+            {
+              "id": "lingshu-7b",
+              "env": "lingshu"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "allocation_constraints": {
+    "remote_a_free_GB": 160,
+    "remote_b_free_GB": 350,
+    "remote_a_estimated_installed_GB": 143,
+    "remote_b_estimated_installed_GB": 321,
+    "runtime_estimate_hours": {
+      "local": 16.13,
+      "remote_a": 14.51,
+      "remote_b": 13.17
+    },
+    "weights_exclude_git": true,
+    "install_and_remove_archives_before_copying_weights": true
+  }
+}

@@ -1,0 +1,12 @@
+version: privacy-safety-ras-v1-gpt-5.4
+model: gpt-5.4
+base_url: https://www.dmxapi.cn/v1
+api_key_env: openai_apikey
+timeout_seconds: 300
+max_attempts: 2
+generation:
+  max_completion_tokens: 8192
+rubrics:
+  privacy: prompts/privacy.yaml
+  safety: prompts/safety.yaml
+  response: prompts/response_appropriateness.yaml

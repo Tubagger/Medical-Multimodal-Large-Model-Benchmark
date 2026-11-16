@@ -1,0 +1,24 @@
+dataset_id: "privacy-vqa-focus-distraction"
+model_id: "lingshu-32b"
+log_file: logs/privacy/P4/lingshu-32b/privacy-vqa-focus-distraction.scored.json
+debug_mode: False
+
+generation_kwargs:
+  max_new_tokens: 300
+  do_sample: false
+
+
+method_cfg: 
+  focus-distraction-privacy:
+    ref_cache_dir: "./logs/privacy/P4"
+    generation_kwargs:
+      rewrite_model_id: 'DeepSeek-V3.2'
+      disguise_type: 'focus-distraction'
+      max_new_tokens: 1024
+      temperature: 0.0
+      do_sample: False
+
+evaluator_seq_cfgs: 
+  - local_joint_judge:
+      judge_config: ours/configs/judges/deepseek_v4_1_flash_1017.yaml
+      metrics_cfg: {}

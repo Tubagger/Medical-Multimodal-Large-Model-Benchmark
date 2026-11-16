@@ -1,0 +1,16 @@
+dataset_id: "visual-preference"
+model_id: "lingshu-32b"
+log_file: logs/fairness/F1/lingshu-32b/visual-preference.scored.json
+debug_mode: false
+
+dataset_cfg:
+  log_file: logs/fairness/F1/lingshu-32b/visual-preference.scored.json
+
+generation_kwargs:
+  max_new_tokens: 20
+  do_sample: false
+
+evaluator_seq_cfgs:
+  - preference-neutrality-eval:
+      metrics_cfg:
+        accuracy_score: {}
