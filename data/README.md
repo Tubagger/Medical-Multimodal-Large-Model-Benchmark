@@ -31,5 +31,4 @@ To reconstruct the benchmark:
 5. Do not commit patient data, rendered PHI, model responses, or judge outputs.
 
 The directory structure alone is not evidence of clinical validity. See the
-paper and the task-level documentation for construct boundaries and review
-status.
+task-level documentation for construct boundaries and review status.

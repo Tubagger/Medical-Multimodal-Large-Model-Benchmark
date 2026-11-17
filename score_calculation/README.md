@@ -9,7 +9,7 @@ derived tables or figures under `score_calculation/results/`.
   or a judge.
 - `build_dimension_tables.py` and `build_supplementary_tables.py` render tables
   from a frozen aggregate snapshot.
-- `plot_*.py` regenerate manuscript figures from frozen result files.
+- `plot_*.py` regenerate benchmark figures from frozen result files.
 
 Result artifacts are intentionally ignored by Git. To compare runs, retain the
 same data snapshot, model revision, judge configuration, prompts, and generation

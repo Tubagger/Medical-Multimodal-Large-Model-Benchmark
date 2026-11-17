@@ -1,6 +1,6 @@
 # R.1 OOD Medical VQA Construction
 
-本目录重构论文中的 R.1 OOD 医学 VQA 数据。构建器只接受冻结的
+本目录重构基准中的 R.1 OOD 医学 VQA 数据。构建器只接受冻结的
 `GMAI_OOD_modality.tsv`，统一模态名称中的空白后，按模态分别使用
 `numpy.random.RandomState(42)` 无放回抽取至多25例。该设置精确复现18个
 模型日志共同使用的219个ID。

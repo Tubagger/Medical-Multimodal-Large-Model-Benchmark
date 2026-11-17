@@ -30,7 +30,7 @@ access conditions of their original providers.
 - Model checkpoints or LoRA weights.
 - Responses, judge outputs, `logs/`, SQLite indexes, and run caches.
 - API keys, provider credentials, or private endpoint configuration.
-- Manuscript sources, PDFs, and generated figure files.
+- Generated result tables, plots, and document exports.
 
 ## Installation
 
@@ -140,10 +140,10 @@ summary:
 python score_calculation/build_scores.py
 ```
 
-`score_calculation/build_scores.py` follows the manuscript definitions. In
-particular, R.4 uses the mean branch accuracy over the four frozen rewrites.
-The script writes final tables only to `score_calculation/results/`, which is
-ignored by Git.
+`score_calculation/build_scores.py` follows the benchmark score definitions. In
+particular, R.4 uses the mean branch accuracy over the four frozen rewrites. The
+script writes final tables only to `score_calculation/results/`, which is ignored
+by Git.
 
 ## Reproducibility Notes
 
@@ -153,8 +153,8 @@ ignored by Git.
   branches depend on each model's initial answer.
 - The fixed LLM judge and its prompts are versioned in `ours/configs/judges/`.
 - The repository does not include the frozen data, answers, or judge responses
-  used for the manuscript tables. Exact numerical replication therefore requires
-  the corresponding data and output snapshot in addition to this code.
+  used for the reported benchmark results. Exact numerical replication therefore
+  requires the corresponding data and output snapshot in addition to this code.
 
 ## Responsible Use
 
