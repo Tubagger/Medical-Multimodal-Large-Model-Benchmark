@@ -1,0 +1,20 @@
+max_retries: 10
+timeout: 1
+# 每个图像块保持 448×448
+input_size: 448
+
+# 最多 4 个局部图像块
+max_num: 4
+
+# 多图块时，额外增加一张完整图片缩略图
+use_thumbnail: true
+
+# 调试时查看实际产生的图像块数量
+print_image_info: false
+model_path: models/InternVL3_5-38B
+
+# Keep the 38B checkpoint balanced across both 48 GiB GPUs. Reserving about
+# 5 GiB per card prevents generation activations from overflowing GPU 0.
+device_map: balanced
+required_cuda_devices: 2
+max_memory_per_gpu: 42GiB

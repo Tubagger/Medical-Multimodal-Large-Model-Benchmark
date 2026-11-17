@@ -21,7 +21,7 @@ run_state/*
 run_state/shared/*
 !run_state/shared/model_catalog.json
 
-models/
+/models/
 checkpoints/
 outputs/
 results/
